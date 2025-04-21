@@ -22,6 +22,7 @@ class LoginScreen extends StatelessWidget {
                 style: TextStyle(
                   fontSize: 24,
                   fontWeight: FontWeight.bold,
+                  color: Color(0xFF328E6E), // Deep blue
                 ),
               ),
               const SizedBox(height: 40),
@@ -67,7 +68,7 @@ class LoginScreen extends StatelessWidget {
                         // Handle login
                       },
                       style: ElevatedButton.styleFrom(
-                        backgroundColor: Colors.black,
+                        backgroundColor: Color(0xFF328E6E),
                         foregroundColor: Colors.white,
                         padding: const EdgeInsets.symmetric(vertical: 14),
                         shape: RoundedRectangleBorder(
@@ -95,7 +96,7 @@ class LoginScreen extends StatelessWidget {
                     // Handle password reset
                   },
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: const Color.fromARGB(255, 242, 242, 242),
+                    backgroundColor: const Color(0xFFE1EEBC),
                     foregroundColor: Colors.black,
                     padding: const EdgeInsets.symmetric(vertical: 14),
                     shape: RoundedRectangleBorder(

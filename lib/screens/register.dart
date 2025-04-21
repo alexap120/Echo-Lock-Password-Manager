@@ -32,7 +32,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                 style: TextStyle(
                   fontSize: 24,
                   fontWeight: FontWeight.bold,
-                  color: Color(0xFF0A0A52), // Deep blue
+                  color: Color(0xFF328E6E), // Deep blue
                 ),
               ),
               const SizedBox(height: 8),
@@ -102,6 +102,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                       borderRadius: BorderRadius.circular(12),
                     ),
                     foregroundColor: Colors.white,
+                    backgroundColor: Color(0xFF328E6E), // Deep blue
                   ),
                   child: const Text(
                     'Register',
@@ -126,7 +127,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                     child: const Text(
                       'Login',
                       style: TextStyle(
-                        color: Color(0xFF2563EB),
+                        color: Color(0xFF90C67C),
                         fontWeight: FontWeight.w500,
                       ),
                     ),
