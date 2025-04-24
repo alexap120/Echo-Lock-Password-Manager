@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:password_manager/screens/home.dart';
+import 'package:password_manager/screens/resetPassword/enterEmail.dart';
 import '../widgets/custom_input_field.dart';
 import 'register.dart';
 
@@ -65,7 +67,10 @@ class LoginScreen extends StatelessWidget {
                   Expanded(
                     child: ElevatedButton(
                       onPressed: () {
-                        // Handle login
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(builder: (context) => HomeScreen()),
+                        );
                       },
                       style: ElevatedButton.styleFrom(
                         backgroundColor: Color(0xFF328E6E),
@@ -93,7 +98,10 @@ class LoginScreen extends StatelessWidget {
                 width: double.infinity,
                 child: ElevatedButton(
                   onPressed: () {
-                    // Handle password reset
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(builder: (context) => const ResetPasswordScreen()),
+                    );
                   },
                   style: ElevatedButton.styleFrom(
                     backgroundColor: const Color(0xFFE1EEBC),
