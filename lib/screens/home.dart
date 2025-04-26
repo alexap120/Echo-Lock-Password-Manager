@@ -28,10 +28,10 @@ class _HomeScreenState extends State<HomeScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.white,
+      backgroundColor: Colors.grey[100],
       appBar: AppBar(
         elevation: 0,
-        backgroundColor: Colors.white,
+        backgroundColor: Color(0xFFF3F4F6),
         leading: const Padding(
           padding: EdgeInsets.only(left: 16.0),
           child: Icon(Icons.inventory_2_outlined, color: Colors.deepPurple),
@@ -40,14 +40,14 @@ class _HomeScreenState extends State<HomeScreen> {
           'ConceptX',
           style: TextStyle(
             fontWeight: FontWeight.bold,
-            color: Colors.black,
+            color: Color(0xFF328E6E),
           ),
         ),
         actions: [
           Padding(
             padding: const EdgeInsets.only(right: 16.0),
             child: CircleAvatar(
-            //  backgroundImage: AssetImage('assets/profile.jpg'), // replace with your own image path
+              backgroundImage: AssetImage('assets/user.jpg'),
               radius: 18,
             ),
           ),
@@ -62,47 +62,61 @@ class _HomeScreenState extends State<HomeScreen> {
             shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
             elevation: 1,
             margin: const EdgeInsets.symmetric(vertical: 6),
-            child: ListTile(
-              contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-              title: Text(item['title'], style: const TextStyle(fontWeight: FontWeight.bold)),
-              subtitle: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(item['email']),
-                  if (item['shared']) ...[
-                    const SizedBox(height: 4),
-                    Row(
-                      children: const [
-                        Text("Shared by", style: TextStyle(fontSize: 12, color: Colors.grey)),
-                        SizedBox(width: 6),
-                        CircleAvatar(
-                          radius: 10,
-                          backgroundImage: AssetImage('assets/user1.jpg'), // sample shared user
-                        ),
-                        SizedBox(width: 4),
-                        CircleAvatar(
-                          radius: 10,
-                          backgroundImage: AssetImage('assets/user2.jpg'), // another user
-                        ),
-                      ],
-                    ),
-                  ]
-                ],
+            child: Container(
+              decoration: BoxDecoration(
+                color: Colors.white, // Set the background color to white
+                borderRadius: BorderRadius.circular(12), // Round the corners
               ),
-              trailing: const Icon(Icons.more_vert),
+              child: ListTile(
+                contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                title: Text(
+                  item['title'],
+                  style: TextStyle(
+                    fontWeight: FontWeight.bold,
+                    color: Color(0xFF90C67C), // <-- set title color to purple
+                  ),
+                ),
+                subtitle: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      item['email'],
+                      style: TextStyle(
+                        color: Colors.grey, // <-- set title color to purple
+                      ),
+                    ),
+                    if (item['shared']) ...[
+                      const SizedBox(height: 4),
+                      Row(
+                        children: const [
+                          Text("Shared by", style: TextStyle(fontSize: 12, color: Colors.grey)),
+                          SizedBox(width: 6),
+                          CircleAvatar(
+                            radius: 10,
+                            backgroundImage: AssetImage('assets/user1.jpg'),
+                          ),
+                          SizedBox(width: 4),
+                          CircleAvatar(
+                            radius: 10,
+                            backgroundImage: AssetImage('assets/user2.jpg'),
+                          ),
+                        ],
+                      ),
+                    ]
+                  ],
+                ),
+                trailing: const Icon(
+                  Icons.more_horiz,
+                  size: 28, // <- increase size to make it look bolder
+                ),
+              ),
             ),
           );
         },
       ),
-      floatingActionButton: FloatingActionButton(
-        onPressed: () {},
-        backgroundColor: Colors.blue,
-        child: const Icon(Icons.add),
-      ),
-      floatingActionButtonLocation: FloatingActionButtonLocation.centerDocked,
       bottomNavigationBar: CustomBottomNavBar(
-        currentIndex: _selectedIndex,
-        onTap: _onTabTapped,
+        selectedIndex: _selectedIndex, // <-- Match the param name from your custom widget
+        onItemTapped: _onTabTapped,    // <-- Match the callback name
       ),
     );
   }
