@@ -1,6 +1,9 @@
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
+import 'package:password_manager/screens/home.dart';
 import 'package:password_manager/screens/login.dart';
+import 'package:password_manager/screens/overview.dart';
+import 'package:password_manager/screens/settings.dart';
 
 class CustomBottomNavBar extends StatelessWidget {
   final int selectedIndex;
@@ -91,24 +94,27 @@ class CustomBottomNavBar extends StatelessWidget {
 void _handleNavBarAction(int index, BuildContext context) {
   switch (index) {
     case 0:
-    // Home action
-      print("Home tapped");
-      //Navigator.push(context, MaterialPageRoute(builder: (context) => LoginScreen()));
+      Navigator.push(
+        context,
+        MaterialPageRoute(builder: (context) => HomeScreen()),
+      );
       break;
     case 1:
-    // Overview action
-      print("Overview tapped");
-      // Navigate to Overview screen or perform any action
+      Navigator.push(
+        context,
+        MaterialPageRoute(builder: (context) => DashboardScreen()),
+      );
       break;
     case 2:
     // Search action
       print("Search tapped");
       // Navigate to Search screen or perform any action
       break;
-    case 3:
-    // Settings action
-      print("Settings tapped");
-      // Navigate to Settings screen or perform any action
+    case 4:
+      Navigator.push(
+        context,
+        MaterialPageRoute(builder: (context) => SettingsScreen()),
+      );
       break;
     default:
       break;
