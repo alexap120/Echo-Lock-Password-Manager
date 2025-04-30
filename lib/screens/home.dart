@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:password_manager/screens/profile_page.dart';
 import '../widgets/custom_bottom_nav_bar.dart';
 
 class HomeScreen extends StatefulWidget {
@@ -46,9 +47,25 @@ class _HomeScreenState extends State<HomeScreen> {
         actions: [
           Padding(
             padding: const EdgeInsets.only(right: 16.0),
-            child: CircleAvatar(
-              backgroundImage: AssetImage('assets/user.jpg'),
-              radius: 18,
+            child: GestureDetector(
+              onTap: () {
+                showModalBottomSheet(
+                  context: context,
+                  isScrollControlled: true,
+                  backgroundColor: Colors.transparent,
+                  builder: (context) => ProfilePopup(
+                    fullName: 'Alexandre Pereira',
+                    username: 'AlexP123',
+                    email: 'alex@example.com',
+                    memberSince: 'March 2024',
+                    profileImageUrl: 'https://your-image-url.com/photo.jpg',
+                  ),
+                );
+              },
+              child: CircleAvatar(
+                backgroundImage: AssetImage('assets/user.jpg'),
+                radius: 18,
+              ),
             ),
           ),
         ],

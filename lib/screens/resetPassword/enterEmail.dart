@@ -44,10 +44,10 @@ class ResetPasswordScreen extends StatelessWidget {
               const SizedBox(height: 32),
               CustomInputField(
                 label: 'Email',
-                hintText: 'Enter your email',
+                //hintText: 'Enter your email',
                 controller: _emailController,
                 keyboardType: TextInputType.emailAddress,
-                icon: Icons.email_outlined,
+            //    icon: Icons.email_outlined,
               ),
               const SizedBox(height: 20),
               SizedBox(

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:password_manager/screens/profile_page.dart';
 import 'package:password_manager/widgets/custom_bottom_nav_bar.dart';
 
 // The main Settings Screen Widget
@@ -39,11 +40,27 @@ class _SettingsScreenState extends State<SettingsScreen> {
           ),
         ),
         actions: [
-          const Padding(
-            padding: EdgeInsets.only(right: 16.0),
-            child: CircleAvatar(
-              backgroundImage: AssetImage('assets/user.jpg'),
-              radius: 18,
+          Padding(
+            padding: const EdgeInsets.only(right: 16.0),
+            child: GestureDetector(
+              onTap: () {
+                showModalBottomSheet(
+                  context: context,
+                  isScrollControlled: true,
+                  backgroundColor: Colors.transparent,
+                  builder: (context) => ProfilePopup(
+                    fullName: 'Alexandre Pereira',
+                    username: 'AlexP123',
+                    email: 'alex@example.com',
+                    memberSince: 'March 2024',
+                    profileImageUrl: 'https://your-image-url.com/photo.jpg',
+                  ),
+                );
+              },
+              child: CircleAvatar(
+                backgroundImage: AssetImage('assets/user.jpg'),
+                radius: 18,
+              ),
             ),
           ),
         ],
@@ -107,6 +124,18 @@ class _SettingsScreenState extends State<SettingsScreen> {
               setState(() {
                 _isBiometricEnabled = !_isBiometricEnabled; // Toggle the switch state
               });
+              print('Biometric Login toggled by card tap: $_isBiometricEnabled');
+            },
+            titleColor: Color(0xFF67AE6E),
+          ),
+
+          // 2FA Card
+          _buildSettingsCard(
+            context: context,
+            title: '2-Step Verification',
+            subtitle: 'Setup Two-Factor Authentication',
+            trailing: const Icon(Icons.close, color: Colors.red),
+            onTap: () {
               print('Biometric Login toggled by card tap: $_isBiometricEnabled');
             },
             titleColor: Color(0xFF67AE6E),

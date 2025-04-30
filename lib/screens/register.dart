@@ -10,6 +10,9 @@ class RegisterScreen extends StatefulWidget {
 }
 
 class _RegisterScreenState extends State<RegisterScreen> {
+  final _firstNameController = TextEditingController();
+  final _lastNameController = TextEditingController();
+  final _usernameController = TextEditingController();
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
   final _repeatPasswordController = TextEditingController();
@@ -45,26 +48,49 @@ class _RegisterScreenState extends State<RegisterScreen> {
               ),
               const SizedBox(height: 32),
 
+              // Full Name fields (First Name and Last Name side by side)
+              Row(
+                children: [
+                  Expanded(
+                    child: CustomInputField(
+                      label: 'First Name',
+                      controller: _firstNameController,
+                    ),
+                  ),
+                  const SizedBox(width: 16),
+                  Expanded(
+                    child: CustomInputField(
+                      label: 'Last Name',
+                      controller: _lastNameController,
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 16),
+
+              // Username Field
+              CustomInputField(
+                label: 'Username',
+                controller: _usernameController,
+              ),
+              const SizedBox(height: 16),
+
               // Email field
               CustomInputField(
                 label: 'Your email',
-                hintText: 'Enter your email',
                 controller: _emailController,
+                optionalIcon: Icons.alternate_email,
                 keyboardType: TextInputType.emailAddress,
-                icon: Icons.email_outlined,
               ),
               const SizedBox(height: 16),
 
               // Password field
               CustomInputField(
                 label: 'Password',
-                hintText: 'Enter your password',
                 controller: _passwordController,
                 obscureText: _obscurePassword,
-                icon: _obscurePassword
-                    ? Icons.visibility_off
-                    : Icons.visibility,
-                onIconTap: () {
+                optionalIcon: _obscurePassword ? Icons.visibility_off : Icons.visibility,
+                onOptionalIconTap: () {
                   setState(() {
                     _obscurePassword = !_obscurePassword;
                   });
@@ -74,20 +100,17 @@ class _RegisterScreenState extends State<RegisterScreen> {
 
               // Repeat Password field
               CustomInputField(
-                label: 'Repeat Password',
-                hintText: 'Repeat password',
+                label: 'Password',
                 controller: _repeatPasswordController,
-                obscureText: _obscureRepeatPassword,
-                icon: _obscureRepeatPassword
-                    ? Icons.visibility_off
-                    : Icons.visibility,
-                onIconTap: () {
+                obscureText: _obscurePassword,
+                optionalIcon: _obscurePassword ? Icons.visibility_off : Icons.visibility,
+                onOptionalIconTap: () {
                   setState(() {
-                    _obscureRepeatPassword = !_obscureRepeatPassword;
+                    _obscurePassword = !_obscurePassword;
                   });
                 },
               ),
-              const SizedBox(height: 32),
+              const SizedBox(height: 16),
 
               // Register Button
               SizedBox(
@@ -96,13 +119,30 @@ class _RegisterScreenState extends State<RegisterScreen> {
                 child: ElevatedButton(
                   onPressed: () {
                     // Register logic here
+                    String firstName = _firstNameController.text;
+                    String lastName = _lastNameController.text;
+                    String username = _usernameController.text;
+                    String email = _emailController.text;
+                    String password = _passwordController.text;
+                    String repeatPassword = _repeatPasswordController.text;
+
+                    // You can now use these values for your registration process
+                    print('First Name: $firstName');
+                    print('Last Name: $lastName');
+                    print('Username: $username');
+                    print('Email: $email');
+                    print('Password: $password');
+                    print('Repeat Password: $repeatPassword');
+
+                    // Add your actual registration logic here,
+                    // including password matching and API calls.
                   },
                   style: ElevatedButton.styleFrom(
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(12),
                     ),
                     foregroundColor: Colors.white,
-                    backgroundColor: Color(0xFF328E6E), // Deep blue
+                    backgroundColor: const Color(0xFF328E6E), // Deep blue
                   ),
                   child: const Text(
                     'Register',
@@ -119,10 +159,11 @@ class _RegisterScreenState extends State<RegisterScreen> {
                   const Text("Already have an account? "),
                   GestureDetector(
                     onTap: () {
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(builder: (context) => const LoginScreen()),
-                        );
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                            builder: (context) => const LoginScreen()),
+                      );
                     },
                     child: const Text(
                       'Login',
