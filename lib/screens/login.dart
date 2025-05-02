@@ -13,7 +13,7 @@ class LoginScreen extends StatelessWidget {
 
     return Scaffold(
       backgroundColor: Colors.white,
-      body: Padding(
+      body: SingleChildScrollView( // Wrap the main content with SingleChildScrollView
         padding: const EdgeInsets.symmetric(horizontal: 24.0),
         child: Center(
           child: Column(
@@ -37,10 +37,12 @@ class LoginScreen extends StatelessWidget {
 
               CustomInputField(
                 label: 'Email',
-         //       hintText: 'Enter your email',
                 controller: emailController,
-          //      icon: Icons.email_outlined,
+                optionalIcon: Icons.alternate_email,
+                keyboardType: TextInputType.emailAddress,
               ),
+
+
               const SizedBox(height: 50),
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,

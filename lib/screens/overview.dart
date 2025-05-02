@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_speed_dial/flutter_speed_dial.dart';
 import 'package:password_manager/screens/profile_page.dart';
 
 import '../widgets/custom_bottom_nav_bar.dart';
@@ -22,6 +23,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      extendBody: true,
       backgroundColor: Colors.grey[100],
       appBar: AppBar(
         backgroundColor: Color(0xFFF3F4F6),
@@ -91,7 +93,6 @@ class _DashboardScreenState extends State<DashboardScreen> {
                 _buildHealthCard(Icons.refresh, '5', 'Reused', Colors.orange),
               ],
             ),
-            const SizedBox(height: 24),
             const Text(
               'Most Used Logins',
               style: TextStyle(
@@ -110,6 +111,57 @@ class _DashboardScreenState extends State<DashboardScreen> {
       bottomNavigationBar: CustomBottomNavBar(
         selectedIndex: _selectedIndex,
         onItemTapped: _onTabTapped,
+      ),
+
+      floatingActionButton: SpeedDial(
+        animatedIcon: AnimatedIcons.menu_close,
+        backgroundColor: Color(0xFF328E6E),
+        foregroundColor: Colors.white,
+        spacing: 8,
+        children: [
+          SpeedDialChild(
+            child: const Icon(Icons.key),
+            backgroundColor: Color(0xFF67AE6E),
+            foregroundColor: Colors.white,
+            label: 'Add Login',
+            labelStyle: const TextStyle(
+              color: Color(0xFF90C67C), // Custom text color
+              fontWeight: FontWeight.bold, // Custom font weight
+              fontSize: 16.0, // Custom font size
+            ),
+            onTap: () {
+              // Add your action here
+            },
+          ),
+          SpeedDialChild(
+            child: const Icon(Icons.note_add_outlined),
+            backgroundColor: Color(0xFF67AE6E),
+            foregroundColor: Colors.white,
+            label: 'Add Note',
+            labelStyle: const TextStyle(
+              color: Color(0xFF90C67C), // Custom text color
+              fontWeight: FontWeight.bold, // Custom font weight
+              fontSize: 16.0, // Custom font size
+            ),
+            onTap: () {
+              // Add your action here
+            },
+          ),
+          SpeedDialChild(
+            child: const Icon(Icons.add_card_outlined),
+            foregroundColor: Colors.white,
+            backgroundColor: Color(0xFF67AE6E),
+            label: 'Add Card',
+            labelStyle: const TextStyle(
+              color: Color(0xFF90C67C), // Custom text color
+              fontWeight: FontWeight.bold, // Custom font weight
+              fontSize: 16.0, // Custom font size
+            ),
+            onTap: () {
+              // Add your action here
+            },
+          ),
+        ],
       ),
     );
   }

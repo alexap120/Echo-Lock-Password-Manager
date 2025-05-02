@@ -4,6 +4,7 @@ import 'package:password_manager/screens/home.dart';
 import 'package:password_manager/screens/login.dart';
 import 'package:password_manager/screens/overview.dart';
 import 'package:password_manager/screens/settings.dart';
+import 'package:animated_expandable_fab/animated_expandable_fab.dart';
 
 class CustomBottomNavBar extends StatelessWidget {
   final int selectedIndex;
@@ -17,106 +18,103 @@ class CustomBottomNavBar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Stack(
-      alignment: Alignment.bottomCenter,
-      clipBehavior: Clip.none,
-      children: [
-        Container(
-          height: 70,
+    return SafeArea(
+      child: Padding(
+        padding: const EdgeInsets.symmetric(vertical: 10.0, horizontal: 16.0), // Adjusted padding
+        child: Material(
+          elevation: 8.0,
+          borderRadius: BorderRadius.circular(30),
+          color: Colors.white, // Dark background color
           child: BottomAppBar(
             shape: const CircularNotchedRectangle(),
             notchMargin: 8,
-            color: Color(0xFFF3F4F6),
+            color: Colors.transparent,
             child: Row(
               mainAxisAlignment: MainAxisAlignment.spaceAround,
               children: [
                 _buildNavBarItem(Icons.home, 'Home', 0, context),
                 _buildNavBarItem(Icons.data_usage_rounded, 'Overview', 1, context),
-                const SizedBox(width: 50), // space for FAB
+                const SizedBox(width: 0),
                 _buildNavBarItem(Icons.search, 'Search', 3, context),
                 _buildNavBarItem(Icons.settings, 'Settings', 4, context),
               ],
             ),
           ),
         ),
-        Positioned(
-          bottom: 15,
-          child: SizedBox(
-            width: 65,  // Make it bigger
-            height: 65, // Make it bigger
-            child: FloatingActionButton(
-              shape: const CircleBorder(),
-              backgroundColor: const Color(0xFF328E6E),
-              elevation: 8,
-              onPressed: () {},
-              child: const Icon(
-                Icons.add,
-                size: 34, // Also make the icon a bit bigger
-                color: Colors.white,
-              ),
-            ),
-          ),
-        ),
-      ],
+      ),
     );
   }
 
   Widget _buildNavBarItem(IconData icon, String label, int index, BuildContext context) {
+    final isSelected = selectedIndex == index;
+    final textColor = isSelected ? Colors.white : Colors.grey[400];
+    final backgroundColor = isSelected ? Color(0xFF328E6E) : Colors.transparent;
+
     return InkWell(
       onTap: () {
-        onItemTapped(index);  // Update the selected index when an item is tapped
-        _handleNavBarAction(index, context);  // Call the function to perform actions based on the index
+        onItemTapped(index);
+        _handleNavBarAction(index, context);
       },
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Icon(
-            icon,
-            color: selectedIndex == index
-                ? const Color(0xFF90C67C) // Selected icon color
-                : Colors.grey, // Unselected icon color (Change this to any color you want)
-          ),
-          Text(
-            label,
-            style: TextStyle(
-              color: selectedIndex == index
-                  ? const Color(0xFF90C67C) // Selected text color
-                  : Colors.grey, // Unselected text color (Change this too)
-            ),
-          ),
-        ],
+      borderRadius: BorderRadius.circular(25), // For InkWell ripple effect
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 12.0, vertical: 8.0),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            if (isSelected)
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 12.0, vertical: 6.0),
+                decoration: BoxDecoration(
+                  color: backgroundColor,
+                  borderRadius: BorderRadius.circular(20),
+                ),
+                child: Row(
+                  children: [
+                    Icon(
+                      icon,
+                      color: textColor,
+                      size: 20,
+                    ),
+                    const SizedBox(width: 8),
+                    Text(
+                      label,
+                      style: TextStyle(
+                        color: textColor,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ],
+                ),
+              )
+            else
+              Padding(
+                padding: const EdgeInsets.symmetric(vertical: 8.0),
+                child: Icon(
+                  icon,
+                  color: textColor,
+                  size: 24,
+                ),
+              ),
+          ],
+        ),
       ),
     );
   }
-}
 
-// Handle the action for each navbar item
-void _handleNavBarAction(int index, BuildContext context) {
-  switch (index) {
-    case 0:
-      Navigator.push(
-        context,
-        MaterialPageRoute(builder: (context) => HomeScreen()),
-      );
-      break;
-    case 1:
-      Navigator.push(
-        context,
-        MaterialPageRoute(builder: (context) => DashboardScreen()),
-      );
-      break;
-    case 2:
-    // Search action
-      print("Search tapped");
-      // Navigate to Search screen or perform any action
-      break;
-    case 4:
-      Navigator.push(
-        context,
-        MaterialPageRoute(builder: (context) => SettingsScreen()),
-      );
-      break;
-    default:
-      break;
+  void _handleNavBarAction(int index, BuildContext context) {
+    switch (index) {
+      case 0:
+        Navigator.push(context, MaterialPageRoute(builder: (_) => HomeScreen()));
+        break;
+      case 1:
+        Navigator.push(context, MaterialPageRoute(builder: (_) => DashboardScreen()));
+        break;
+      case 3:
+        print("Search tapped");
+        break;
+      case 4:
+        Navigator.push(context, MaterialPageRoute(builder: (_) => SettingsScreen()));
+        break;
+    }
   }
 }

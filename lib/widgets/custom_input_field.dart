@@ -27,16 +27,20 @@ class CustomInputField extends StatefulWidget {
 class _CustomInputFieldState extends State<CustomInputField> {
   final FocusNode _focusNode = FocusNode();
   bool _isFocused = false;
+  bool _isValidEmail = true; // Track email validity
+  String? _errorMessage;
 
   @override
   void initState() {
     super.initState();
     _focusNode.addListener(_onFocusChange);
+    widget.controller.addListener(_onInputChange); // Listen for text changes
   }
 
   @override
   void dispose() {
     _focusNode.removeListener(_onFocusChange);
+    widget.controller.removeListener(_onInputChange);
     _focusNode.dispose();
     super.dispose();
   }
@@ -44,6 +48,28 @@ class _CustomInputFieldState extends State<CustomInputField> {
   void _onFocusChange() {
     setState(() {
       _isFocused = _focusNode.hasFocus;
+      if (!_isFocused && widget.keyboardType == TextInputType.emailAddress) {
+        _validateEmail(widget.controller.text);
+      }
+    });
+  }
+
+  void _onInputChange() {
+    if (widget.keyboardType == TextInputType.emailAddress) {
+      _validateEmail(widget.controller.text);
+    }
+  }
+
+  void _validateEmail(String value) {
+    final emailRegex = RegExp(r'^[\w-]+(\.[\w-]+)*@([\w-]+\.)+[a-zA-Z]{2,7}$');
+    setState(() {
+      if (value.isEmpty || emailRegex.hasMatch(value)) {
+        _isValidEmail = true;
+        _errorMessage = null;
+      } else {
+        _isValidEmail = false;
+        _errorMessage = 'Please enter an email address in the format';
+      }
     });
   }
 
@@ -56,36 +82,55 @@ class _CustomInputFieldState extends State<CustomInputField> {
 
   @override
   Widget build(BuildContext context) {
-    return Material(
-      elevation: _isFocused ? 4.0 : 0.0,
-      borderRadius: BorderRadius.circular(12),
-      shadowColor: Colors.grey.withOpacity(0.5),
-      child: TextField(
-        focusNode: _focusNode,
-        controller: widget.controller,
-        obscureText: widget.obscureText,
-        keyboardType: widget.keyboardType,
-        decoration: InputDecoration(
-          labelText: widget.label,
-          filled: true,
-          fillColor: Colors.white,
-          contentPadding: const EdgeInsets.fromLTRB(16, 20, 16, 12),
-          suffixIcon: _isFocused && widget.optionalIcon != null
-              ? InkWell(
-            onTap: widget.onOptionalIconTap,
-            borderRadius: BorderRadius.circular(20),
-            child: Icon(
-              widget.optionalIcon,
-              color: Colors.grey[600],
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Material(
+          elevation: _isFocused ? 4.0 : 0.0,
+          borderRadius: BorderRadius.circular(12),
+          shadowColor: Colors.grey.withOpacity(0.5),
+          child: TextField(
+            focusNode: _focusNode,
+            controller: widget.controller,
+            obscureText: widget.obscureText,
+            keyboardType: widget.keyboardType,
+            decoration: InputDecoration(
+              labelText: widget.label,
+              filled: true,
+              fillColor: Colors.white,
+              contentPadding: const EdgeInsets.fromLTRB(16, 20, 16, 12),
+              suffixIcon: _isFocused && widget.optionalIcon != null
+                  ? InkWell(
+                onTap: widget.onOptionalIconTap,
+                borderRadius: BorderRadius.circular(20),
+                child: Icon(
+                  widget.optionalIcon,
+                  color: Colors.grey[600],
+                ),
+              )
+                  : null,
+              enabledBorder: _buildBorder(_isValidEmail ? Colors.grey : Colors.red),
+              focusedBorder: _buildBorder(
+                  _isValidEmail ? widget.focusColor : Colors.red,
+                  width: 1.5),
+              border: _buildBorder(Colors.grey),
+              floatingLabelStyle: TextStyle(
+                  color: _isFocused
+                      ? (_isValidEmail ? widget.focusColor : Colors.red)
+                      : Colors.grey[600]),
+              errorText: !_isValidEmail ? _errorMessage : null,
             ),
-          )
-              : null,
-          enabledBorder: _buildBorder(Colors.grey),
-          focusedBorder: _buildBorder(widget.focusColor, width: 1.5),
-          border: _buildBorder(Colors.grey),
-          floatingLabelStyle: TextStyle(color: widget.focusColor),
+          ),
         ),
-      ),
+        if (!_isValidEmail)
+          Padding(
+            padding: const EdgeInsets.only(left: 16.0, top: 8.0),
+            child: Text(
+              "example@domain.com" ?? '',
+              style: const TextStyle(color: Colors.red, fontWeight: FontWeight.bold),
+            ),
+          ),
+      ],
     );
   }
 }

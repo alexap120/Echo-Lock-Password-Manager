@@ -25,6 +25,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
 
     return Scaffold(
       backgroundColor: Colors.grey[100],
+      extendBody: true,
       appBar: AppBar(
         elevation: 0,
         backgroundColor: const Color(0xFFF3F4F6),
