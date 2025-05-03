@@ -1,9 +1,7 @@
-import 'package:animated_expandable_fab/expandable_fab/action_button.dart';
-import 'package:animated_expandable_fab/expandable_fab/expandable_fab.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_speed_dial/flutter_speed_dial.dart';
-import 'package:password_manager/screens/profile_page.dart';
 import '../widgets/custom_bottom_nav_bar.dart';
+import 'login_item_details.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({Key? key}) : super(key: key);
@@ -14,6 +12,10 @@ class HomeScreen extends StatefulWidget {
 
 class _HomeScreenState extends State<HomeScreen> {
   int _selectedIndex = 0;
+  final TextEditingController _searchController = TextEditingController();
+  String _searchQuery = '';
+  String _selectedChip = 'All'; // Track which chip is selected
+
 
   final List<Map<String, dynamic>> items = [
     {'title': 'Login A', 'email': 'someEmail@gmail.com', 'shared': false},
@@ -32,12 +34,18 @@ class _HomeScreenState extends State<HomeScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final filteredItems = items
+        .where((item) =>
+    item['title'].toLowerCase().contains(_searchQuery.toLowerCase()) ||
+        item['email'].toLowerCase().contains(_searchQuery.toLowerCase()))
+        .toList();
+
     return Scaffold(
-      extendBody: true, // Add this line
+      extendBody: true,
       backgroundColor: Colors.grey[100],
       appBar: AppBar(
         elevation: 0,
-        backgroundColor: const Color(0xFFF3F4F6),
+        backgroundColor: const Color(0xFF328E6E),
         leading: const Padding(
           padding: EdgeInsets.only(left: 16.0),
           child: Icon(Icons.inventory_2_outlined, color: Colors.deepPurple),
@@ -46,7 +54,7 @@ class _HomeScreenState extends State<HomeScreen> {
           'ConceptX',
           style: TextStyle(
             fontWeight: FontWeight.bold,
-            color: Color(0xFF328E6E),
+            color: Colors.white,
           ),
         ),
         actions: [
@@ -54,18 +62,7 @@ class _HomeScreenState extends State<HomeScreen> {
             padding: const EdgeInsets.only(right: 16.0),
             child: GestureDetector(
               onTap: () {
-                showModalBottomSheet(
-                  context: context,
-                  isScrollControlled: true,
-                  backgroundColor: Colors.transparent,
-                  builder: (context) => ProfilePopup(
-                    fullName: 'Alexandre Pereira',
-                    username: 'AlexP123',
-                    email: 'alex@example.com',
-                    memberSince: 'March 2024',
-                    profileImageUrl: 'https://your-image-url.com/photo.jpg',
-                  ),
-                );
+                // Profile popup logic
               },
               child: const CircleAvatar(
                 backgroundImage: AssetImage('assets/user.jpg'),
@@ -75,110 +72,222 @@ class _HomeScreenState extends State<HomeScreen> {
           ),
         ],
       ),
-      body: ListView.builder(
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-        itemCount: items.length,
-        itemBuilder: (context, index) {
-          final item = items[index];
-          return Card(
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-            elevation: 1,
-            margin: const EdgeInsets.symmetric(vertical: 6),
+      body: Stack(
+        children: [
+          // Circular green background (oversized and positioned)
+          Positioned(
+            top: -150,
+            left: -100,
+            right: -100,
             child: Container(
+              height: 250, // Adjust height as needed
               decoration: const BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.all(Radius.circular(10)),
-                boxShadow: [
-                  BoxShadow(
-                    color: Color.fromRGBO(0, 0, 0, 0.05),
-                    spreadRadius: -1,
-                    blurRadius: 7,
-                    offset: Offset(0, 3), // changes position of shadow
-                  ),
-                ],
-              ),
-              child: ListTile(
-                contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                title: Text(
-                  item['title'],
-                  style: const TextStyle(
-                    fontWeight: FontWeight.bold,
-                    color: Color(0xFF90C67C), // <-- set title color
-                  ),
+                borderRadius: BorderRadius.vertical(
+                  bottom: Radius.elliptical(300, 100),
                 ),
-                subtitle: Column(
+                color: Color(0xFF328E6E),
+              ),
+            ),
+          ),
+          // Column for the search bar and the list
+          Column(
+            children: [
+              // Search Bar
+              // Search Bar + Filter Chips
+              Padding(
+                padding: const EdgeInsets.all(16.0),
+                child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(
-                      item['email'],
-                      style: const TextStyle(
-                        color: Colors.grey, // <-- set email color
+                    TextField(
+                      controller: _searchController,
+                      onChanged: (value) {
+                        setState(() {
+                          _searchQuery = value;
+                        });
+                      },
+                      decoration: InputDecoration(
+                        hintText: 'Search any items',
+                        hintStyle: const TextStyle(color: Colors.grey),
+                        prefixIcon: Icon(Icons.search, color: Colors.grey),
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(10),
+                          borderSide: BorderSide.none,
+                        ),
+                        filled: true,
+                        fillColor: Colors.white,
+                        contentPadding: const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
                       ),
                     ),
-                    if (item['shared']) ...[
-                      const SizedBox(height: 4),
-                      Row(
-                        children: const [
-                          Text("Shared by", style: TextStyle(fontSize: 12, color: Colors.grey)),
-                          SizedBox(width: 6),
-                          CircleAvatar(
-                            radius: 10,
-                            backgroundImage: AssetImage('assets/user1.jpg'),
+                    const SizedBox(height: 12),
+                    SizedBox(
+                      height: 36,
+                      child: ListView(
+                        scrollDirection: Axis.horizontal,
+                        children: [
+                          FilterChip(
+                            label: Text(
+                              'All',
+                              style: TextStyle(color: _selectedChip == 'All' ? Colors.white : Colors.grey),
+                            ),
+                            selected: _selectedChip == 'All',
+                            onSelected: (_) {
+                              setState(() {
+                                _selectedChip = 'All';
+                              });
+                            },
+                            selectedColor: const Color(0xFF328E6E),
+                            backgroundColor: Colors.grey[100],
+                            shape: const StadiumBorder(),
                           ),
-                          SizedBox(width: 4),
-                          CircleAvatar(
-                            radius: 10,
-                            backgroundImage: AssetImage('assets/user2.jpg'),
+                          const SizedBox(width: 8),
+                          FilterChip(
+                            label: Text(
+                              'Login',
+                              style: TextStyle(color: _selectedChip == 'Login' ? Colors.white : Colors.grey),
+                            ),
+                            selected: _selectedChip == 'Login',
+                            onSelected: (_) {
+                              setState(() {
+                                _selectedChip = 'Login';
+                              });
+                            },
+                            selectedColor: const Color(0xFF328E6E),
+                            backgroundColor: Colors.grey[100],
+                            shape: const StadiumBorder(),
+                          ),
+                          const SizedBox(width: 8),
+                          FilterChip(
+                            label: Text(
+                              'Secure Note',
+                              style: TextStyle(color: _selectedChip == 'Secure Note' ? Colors.white : Colors.grey),
+                            ),
+                            selected: _selectedChip == 'Secure Note',
+                            onSelected: (_) {
+                              setState(() {
+                                _selectedChip = 'Secure Note';
+                              });
+                            },
+                            selectedColor: const Color(0xFF328E6E),
+                            backgroundColor: Colors.grey[100],
+                            shape: const StadiumBorder(),
+                          ),
+                          const SizedBox(width: 8),
+                          FilterChip(
+                            label: Text(
+                              'Card',
+                              style: TextStyle(color: _selectedChip == 'Card' ? Colors.white : Colors.grey),
+                            ),
+                            selected: _selectedChip == 'Card',
+                            onSelected: (_) {
+                              setState(() {
+                                _selectedChip = 'Card';
+                              });
+                            },
+                            selectedColor: const Color(0xFF328E6E),
+                            backgroundColor: Colors.grey[100],
+                            shape: const StadiumBorder(),
                           ),
                         ],
                       ),
-                    ]
+                    ),
+
                   ],
                 ),
-                trailing: const Icon(
-                  Icons.more_horiz,
-                  size: 28, // <- increase size to make it look bolder
+              ),
+              // Login Cards
+              Expanded(
+                child: ListView.builder(
+                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                  itemCount: filteredItems.length,
+                  itemBuilder: (context, index) {
+                    final item = filteredItems[index];
+                    return Card(
+                      color: Colors.white,
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                      elevation: 1,
+                      margin: const EdgeInsets.symmetric(vertical: 6),
+                      child: ListTile(
+                        onTap: () {
+                          showModalBottomSheet(
+                            context: context,
+                            isScrollControlled: true,
+                            backgroundColor: Colors.transparent,
+                            builder: (_) => LoginDetailsBottomSheet(
+                              serviceName: item['title'],
+                              email: item['email'],
+                              password: "superSecret123", // You can replace this dynamically if needed
+                              sharedWith: item['shared']
+                                  ? ["Diego Morata", "Salem Ahmed"] // Dummy data for now
+                                  : [],
+                              isPasswordWeak: true, // You can make this dynamic as well if needed
+                            ),
+                          );
+                        },
+
+                        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                        title: Text(
+                          item['title'],
+                          style: const TextStyle(
+                            fontWeight: FontWeight.bold,
+                            color: Color(0xFF90C67C),
+                          ),
+                        ),
+                        subtitle: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              item['email'],
+                              style: const TextStyle(color: Colors.grey),
+                            ),
+                            if (item['shared']) ...[
+                              const SizedBox(height: 4),
+                              Row(
+                                children: const [
+                                  Text("Shared by", style: TextStyle(fontSize: 12, color: Colors.grey)),
+                                  SizedBox(width: 6),
+                                  CircleAvatar(radius: 10, backgroundImage: AssetImage('assets/user1.jpg')),
+                                  SizedBox(width: 4),
+                                  CircleAvatar(radius: 10, backgroundImage: AssetImage('assets/user2.jpg')),
+                                ],
+                              ),
+                            ]
+                          ],
+                        ),
+                        trailing: const Icon(Icons.more_horiz, size: 28),
+                      ),
+                    );
+                  },
                 ),
               ),
-            ),
-          );
-        },
+            ],
+          ),
+        ],
       ),
       bottomNavigationBar: CustomBottomNavBar(
         selectedIndex: _selectedIndex,
         onItemTapped: _onTabTapped,
       ),
-
       floatingActionButton: SpeedDial(
         animatedIcon: AnimatedIcons.menu_close,
-        backgroundColor: Color(0xFF328E6E),
+        backgroundColor: const Color(0xFF328E6E),
         foregroundColor: Colors.white,
         spacing: 8,
         children: [
           SpeedDialChild(
             child: const Icon(Icons.key),
-            backgroundColor: Color(0xFF67AE6E),
+            backgroundColor: const Color(0xFF67AE6E),
             foregroundColor: Colors.white,
             label: 'Add Login',
-            labelStyle: const TextStyle(
-              color: Color(0xFF90C67C), // Custom text color
-              fontWeight: FontWeight.bold, // Custom font weight
-              fontSize: 16.0, // Custom font size
-            ),
             onTap: () {
               // Add your action here
             },
           ),
           SpeedDialChild(
             child: const Icon(Icons.note_add_outlined),
-            backgroundColor: Color(0xFF67AE6E),
+            backgroundColor: const Color(0xFF67AE6E),
             foregroundColor: Colors.white,
             label: 'Add Note',
-            labelStyle: const TextStyle(
-              color: Color(0xFF90C67C), // Custom text color
-              fontWeight: FontWeight.bold, // Custom font weight
-              fontSize: 16.0, // Custom font size
-            ),
             onTap: () {
               // Add your action here
             },
@@ -186,13 +295,8 @@ class _HomeScreenState extends State<HomeScreen> {
           SpeedDialChild(
             child: const Icon(Icons.add_card_outlined),
             foregroundColor: Colors.white,
-            backgroundColor: Color(0xFF67AE6E),
+            backgroundColor: const Color(0xFF67AE6E),
             label: 'Add Card',
-            labelStyle: const TextStyle(
-              color: Color(0xFF90C67C), // Custom text color
-              fontWeight: FontWeight.bold, // Custom font weight
-              fontSize: 16.0, // Custom font size
-            ),
             onTap: () {
               // Add your action here
             },

@@ -26,7 +26,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
       extendBody: true,
       backgroundColor: Colors.grey[100],
       appBar: AppBar(
-        backgroundColor: Color(0xFFF3F4F6),
+        backgroundColor: Color(0xFF328E6E),
         elevation: 0,
         leading: const Padding(
           padding: EdgeInsets.only(left: 16.0),
@@ -36,7 +36,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
           'ConceptX',
           style: TextStyle(
             fontWeight: FontWeight.bold,
-            color: Color(0xFF328E6E),
+            color: Colors.white,
           ),
         ),
         actions: [
@@ -65,49 +65,74 @@ class _DashboardScreenState extends State<DashboardScreen> {
           ),
         ],
       ),
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const Text(
-              'Password Health',
-              style: TextStyle(
-                fontWeight: FontWeight.bold,
+      body: Stack(
+        children: [
+          // Circular green background (oversized and positioned)
+          Positioned(
+            top: -150,
+            left: -100,
+            right: -100,
+            child: Container(
+              height: 500,
+              decoration: const BoxDecoration(
+                borderRadius: BorderRadius.vertical(
+                  bottom: Radius.elliptical(300, 100), // controls arc curvature
+                ),
                 color: Color(0xFF328E6E),
-                fontSize: 18,
               ),
             ),
-            const SizedBox(height: 12),
-            GridView.count(
-              crossAxisCount: 2,
-              mainAxisSpacing: 12,
-              crossAxisSpacing: 12,
-              shrinkWrap: true,
-              physics: const NeverScrollableScrollPhysics(),
-              childAspectRatio: 1.8,
-              children: [
-                _buildHealthCard(Icons.key, '42', 'Total', Colors.blue),
-                _buildHealthCard(Icons.warning_amber_rounded, '8', 'Weak', Colors.orange),
-                _buildHealthCard(Icons.error_outline, '3', 'Compromised', Colors.red),
-                _buildHealthCard(Icons.refresh, '5', 'Reused', Colors.orange),
+          ),
+
+          // Main content
+          SingleChildScrollView(
+            padding: const EdgeInsets.symmetric(horizontal: 16),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [ // Adjust for visual space below the arc
+                const SizedBox(height: 30),
+                const Text(
+                  'Password Health',
+                  style: TextStyle(
+                    fontWeight: FontWeight.bold,
+                    color: Colors.white,
+                    fontSize: 18,
+                  ),
+                ),
+                const SizedBox(height: 12),
+                GridView.count(
+                  crossAxisCount: 2,
+                  mainAxisSpacing: 12,
+                  crossAxisSpacing: 12,
+                  shrinkWrap: true,
+                  physics: const NeverScrollableScrollPhysics(),
+                  childAspectRatio: 1.8,
+                  children: [
+                    _buildHealthCard(Icons.key, '42', 'Total', Colors.blue),
+                    _buildHealthCard(Icons.warning_amber_rounded, '8', 'Weak', Colors.orange),
+                    _buildHealthCard(Icons.error_outline, '3', 'Compromised', Colors.red),
+                    _buildHealthCard(Icons.refresh, '5', 'Reused', Colors.orange),
+                  ],
+                ),
+                const SizedBox(height: 20),
+                const Text(
+                  'Most Used Logins',
+                  style: TextStyle(
+                    fontWeight: FontWeight.bold,
+                    color: Color(0xFF328E6E),
+                    fontSize: 18,
+                  ),
+                ),
+                const SizedBox(height: 12),
+                _buildLoginTile('Google Account', 'john.doe@gmail.com', Icons.g_mobiledata),
+                _buildLoginTile('Amazon', 'john.doe@email.com', Icons.shopping_bag_outlined),
+                _buildLoginTile('Netflix', 'john.doe@email.com', Icons.tv),
+                const SizedBox(height: 80),
               ],
             ),
-            const Text(
-              'Most Used Logins',
-              style: TextStyle(
-                fontWeight: FontWeight.bold,
-                color: Color(0xFF328E6E),
-                fontSize: 18,
-              ),
-            ),
-            const SizedBox(height: 12),
-            _buildLoginTile('Google Account', 'john.doe@gmail.com', Icons.g_mobiledata),
-            _buildLoginTile('Amazon', 'john.doe@email.com', Icons.shopping_bag_outlined),
-            _buildLoginTile('Netflix', 'john.doe@email.com', Icons.tv),
-          ],
-        ),
+          ),
+        ],
       ),
+
       bottomNavigationBar: CustomBottomNavBar(
         selectedIndex: _selectedIndex,
         onItemTapped: _onTabTapped,
