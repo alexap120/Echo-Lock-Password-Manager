@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_speed_dial/flutter_speed_dial.dart';
+import 'package:password_manager/screens/profile_page.dart';
 import '../widgets/custom_bottom_nav_bar.dart';
 import 'login_item_details.dart';
 
@@ -62,9 +63,20 @@ class _HomeScreenState extends State<HomeScreen> {
             padding: const EdgeInsets.only(right: 16.0),
             child: GestureDetector(
               onTap: () {
-                // Profile popup logic
+                showModalBottomSheet(
+                  context: context,
+                  isScrollControlled: true,
+                  backgroundColor: Colors.transparent,
+                  builder: (context) => ProfilePopup(
+                    fullName: 'Alexandre Pereira',
+                    username: 'AlexP123',
+                    email: 'alex@example.com',
+                    memberSince: 'March 2024',
+                    profileImageUrl: 'https://your-image-url.com/photo.jpg',
+                  ),
+                );
               },
-              child: const CircleAvatar(
+              child: CircleAvatar(
                 backgroundImage: AssetImage('assets/user.jpg'),
                 radius: 18,
               ),

@@ -6,6 +6,8 @@ import 'package:password_manager/screens/overview.dart';
 import 'package:password_manager/screens/settings.dart';
 import 'package:animated_expandable_fab/animated_expandable_fab.dart';
 
+import '../screens/password_generator.dart';
+
 class CustomBottomNavBar extends StatelessWidget {
   final int selectedIndex;
   final Function(int) onItemTapped;
@@ -35,7 +37,7 @@ class CustomBottomNavBar extends StatelessWidget {
                 _buildNavBarItem(Icons.home, 'Home', 0, context),
                 _buildNavBarItem(Icons.data_usage_rounded, 'Overview', 1, context),
                 const SizedBox(width: 0),
-                _buildNavBarItem(Icons.search, 'Search', 3, context),
+                _buildNavBarItem(Icons.key, 'Generator', 3, context),
                 _buildNavBarItem(Icons.settings, 'Settings', 4, context),
               ],
             ),
@@ -110,7 +112,7 @@ class CustomBottomNavBar extends StatelessWidget {
         Navigator.push(context, MaterialPageRoute(builder: (_) => DashboardScreen()));
         break;
       case 3:
-        print("Search tapped");
+        Navigator.push(context, MaterialPageRoute(builder: (_) => PasswordGeneratorWidget()));
         break;
       case 4:
         Navigator.push(context, MaterialPageRoute(builder: (_) => SettingsScreen()));

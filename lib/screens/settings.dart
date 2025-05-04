@@ -13,9 +13,61 @@ class SettingsScreen extends StatefulWidget {
 class _SettingsScreenState extends State<SettingsScreen> {
   bool _isBiometricEnabled = true; // State for the switch
   int _selectedIndex = 4;
+  int _autoLockMinutes = 5;
 
   void _onTabTapped(int index) {
     setState(() => _selectedIndex = index);
+  }
+
+  void _showAutoLockBottomSheet() {
+    showModalBottomSheet(
+      backgroundColor: Colors.white,
+      context: context,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (context) {
+        return Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Padding(
+              padding: EdgeInsets.symmetric(vertical: 16.0),
+              child: Text(
+                'Select Auto-Lock Timer',
+                style: TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.bold,
+                  color: Color(0xFF328E6E),
+                ),
+              ),
+            ),
+            _buildAutoLockOptionTile(context, 1),
+            _buildAutoLockOptionTile(context, 3),
+            _buildAutoLockOptionTile(context, 5),
+            const SizedBox(height: 16),
+          ],
+        );
+      },
+    );
+  }
+
+  Widget _buildAutoLockOptionTile(BuildContext context, int minutes) {
+    return ListTile(
+      title: Text(
+        '$minutes minute${minutes > 1 ? 's' : ''}',
+        style: TextStyle(
+          color: _autoLockMinutes == minutes ? Color(0xFF328E6E) : Colors.black87,
+          fontWeight: _autoLockMinutes == minutes ? FontWeight.bold : FontWeight.normal,
+        ),
+      ),
+      leading: _autoLockMinutes == minutes
+          ? const Icon(Icons.check_circle, color: Color(0xFF328E6E))
+          : const Icon(Icons.circle_outlined, color: Colors.grey),
+      onTap: () {
+        setState(() => _autoLockMinutes = minutes);
+        Navigator.of(context).pop();
+      },
+    );
   }
 
 
@@ -146,12 +198,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
           _buildSettingsCard(
             context: context,
             title: 'Auto-Lock Timer',
-            subtitle: 'Currently set to 5 minutes',
+            subtitle: 'Currently set to $_autoLockMinutes minute${_autoLockMinutes > 1 ? 's' : ''}',
             trailing: const Icon(Icons.chevron_right, color: Colors.grey),
-            onTap: () {
-              // Navigate or perform action
-              print('Auto-Lock Timer tapped');
-            },
+            onTap: () => _showAutoLockBottomSheet(),
             titleColor: Color(0xFF67AE6E),
           ),
 
@@ -262,3 +311,4 @@ class _SettingsScreenState extends State<SettingsScreen> {
     );
   }
 }
+
