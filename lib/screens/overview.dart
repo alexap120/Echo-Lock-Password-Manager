@@ -3,6 +3,8 @@ import 'package:flutter_speed_dial/flutter_speed_dial.dart';
 import 'package:password_manager/screens/profile_page.dart';
 
 import '../widgets/custom_bottom_nav_bar.dart';
+import 'add_card.dart';
+import 'add_login.dart';
 
 class DashboardScreen extends StatefulWidget {
   const DashboardScreen({Key? key}) : super(key: key);
@@ -155,7 +157,10 @@ class _DashboardScreenState extends State<DashboardScreen> {
               fontSize: 16.0, // Custom font size
             ),
             onTap: () {
-              // Add your action here
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (context) => AddLoginPopup()),
+              );
             },
           ),
           SpeedDialChild(
@@ -183,7 +188,14 @@ class _DashboardScreenState extends State<DashboardScreen> {
               fontSize: 16.0, // Custom font size
             ),
             onTap: () {
-              // Add your action here
+                showModalBottomSheet(
+                  context: context,
+                  isScrollControlled: true,
+                  shape: const RoundedRectangleBorder(
+                    borderRadius: BorderRadius.vertical(top: Radius.circular(25)),
+                  ),
+                  builder: (context) => const AddCardPopup(),
+                );
             },
           ),
         ],

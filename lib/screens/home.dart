@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_speed_dial/flutter_speed_dial.dart';
+import 'package:password_manager/screens/add_card.dart';
 import 'package:password_manager/screens/profile_page.dart';
 import '../widgets/custom_bottom_nav_bar.dart';
+import 'add_login.dart';
 import 'login_item_details.dart';
 
 class HomeScreen extends StatefulWidget {
@@ -292,7 +294,10 @@ class _HomeScreenState extends State<HomeScreen> {
             foregroundColor: Colors.white,
             label: 'Add Login',
             onTap: () {
-              // Add your action here
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (context) => AddLoginPopup()),
+              );
             },
           ),
           SpeedDialChild(
@@ -301,7 +306,6 @@ class _HomeScreenState extends State<HomeScreen> {
             foregroundColor: Colors.white,
             label: 'Add Note',
             onTap: () {
-              // Add your action here
             },
           ),
           SpeedDialChild(
@@ -310,7 +314,14 @@ class _HomeScreenState extends State<HomeScreen> {
             backgroundColor: const Color(0xFF67AE6E),
             label: 'Add Card',
             onTap: () {
-              // Add your action here
+              showModalBottomSheet(
+                context: context,
+                isScrollControlled: true,
+                shape: const RoundedRectangleBorder(
+                  borderRadius: BorderRadius.vertical(top: Radius.circular(25)),
+                ),
+                builder: (context) => const AddCardPopup(),
+              );
             },
           ),
         ],
