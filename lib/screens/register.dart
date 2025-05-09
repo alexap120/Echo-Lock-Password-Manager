@@ -83,13 +83,12 @@ class _RegisterScreenState extends State<RegisterScreen> {
                 keyboardType: TextInputType.emailAddress,
               ),
               const SizedBox(height: 16),
-
               // Password field
               CustomInputField(
                 label: 'Password',
                 controller: _passwordController,
                 obscureText: _obscurePassword,
-                optionalIcon: _obscurePassword ? Icons.visibility_off : Icons.visibility,
+                optionalIcon: _obscurePassword ? Icons.visibility : Icons.visibility_off,
                 onOptionalIconTap: () {
                   setState(() {
                     _obscurePassword = !_obscurePassword;
@@ -103,7 +102,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                 label: 'Password',
                 controller: _repeatPasswordController,
                 obscureText: _obscurePassword,
-                optionalIcon: _obscurePassword ? Icons.visibility_off : Icons.visibility,
+                optionalIcon: _obscurePassword ? Icons.visibility : Icons.visibility_off,
                 onOptionalIconTap: () {
                   setState(() {
                     _obscurePassword = !_obscurePassword;

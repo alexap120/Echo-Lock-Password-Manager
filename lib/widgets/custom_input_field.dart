@@ -8,6 +8,8 @@ class CustomInputField extends StatefulWidget {
   final VoidCallback? onOptionalIconTap;
   final TextInputType keyboardType;
   final Color focusColor;
+  final int? minLines;
+  final int? maxLines;
 
   const CustomInputField({
     super.key,
@@ -18,6 +20,8 @@ class CustomInputField extends StatefulWidget {
     this.onOptionalIconTap,
     this.keyboardType = TextInputType.text,
     this.focusColor = const Color(0xFF328E6E),
+    this.minLines,
+    this.maxLines,
   });
 
   @override
@@ -94,6 +98,8 @@ class _CustomInputFieldState extends State<CustomInputField> {
             controller: widget.controller,
             obscureText: widget.obscureText,
             keyboardType: widget.keyboardType,
+            minLines: widget.minLines,
+            maxLines: widget.maxLines ?? (widget.obscureText ? 1 : 1),
             decoration: InputDecoration(
               labelText: widget.label,
               filled: true,

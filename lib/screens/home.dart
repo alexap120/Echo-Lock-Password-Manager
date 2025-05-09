@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_speed_dial/flutter_speed_dial.dart';
 import 'package:password_manager/screens/add_card.dart';
+import 'package:password_manager/screens/add_note.dart';
 import 'package:password_manager/screens/profile_page.dart';
 import '../widgets/custom_bottom_nav_bar.dart';
 import 'add_login.dart';
@@ -306,6 +307,10 @@ class _HomeScreenState extends State<HomeScreen> {
             foregroundColor: Colors.white,
             label: 'Add Note',
             onTap: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (context) => AddNotePopup()),
+              );
             },
           ),
           SpeedDialChild(

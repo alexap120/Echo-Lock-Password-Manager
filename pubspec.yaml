@@ -29,6 +29,7 @@ environment:
 # versions available, run `flutter pub outdated`.
 dependencies:
   animated_expandable_fab: any
+  local_auth: ^2.1.6
   flutter:
     sdk: flutter
 

@@ -5,6 +5,7 @@ import 'package:password_manager/screens/profile_page.dart';
 import '../widgets/custom_bottom_nav_bar.dart';
 import 'add_card.dart';
 import 'add_login.dart';
+import 'add_note.dart';
 
 class DashboardScreen extends StatefulWidget {
   const DashboardScreen({Key? key}) : super(key: key);
@@ -174,7 +175,10 @@ class _DashboardScreenState extends State<DashboardScreen> {
               fontSize: 16.0, // Custom font size
             ),
             onTap: () {
-              // Add your action here
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (context) => AddNotePopup()),
+              );
             },
           ),
           SpeedDialChild(

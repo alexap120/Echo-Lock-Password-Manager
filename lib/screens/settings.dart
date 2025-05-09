@@ -1,6 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:password_manager/screens/profile_page.dart';
+import 'package:password_manager/screens/update_password.dart';
 import 'package:password_manager/widgets/custom_bottom_nav_bar.dart';
+import 'package:local_auth/local_auth.dart';
+
+import 'delete_account.dart';
 
 // The main Settings Screen Widget
 class SettingsScreen extends StatefulWidget {
@@ -150,9 +154,42 @@ class _SettingsScreenState extends State<SettingsScreen> {
             title: 'Change Master Password',
             subtitle: 'Update your vault\'s master password',
             trailing: const Icon(Icons.chevron_right, color: Colors.grey),
-            onTap: () {
-              // Navigate or perform action
-              print('Change Master Password tapped');
+            onTap: () async {
+              final LocalAuthentication auth = LocalAuthentication();
+              bool isAuthenticated = false;
+
+              try {
+                isAuthenticated = await auth.authenticate(
+                  localizedReason: 'Please authenticate to update your password',
+                  options: const AuthenticationOptions(
+                    biometricOnly: true,
+                    stickyAuth: true,
+                  ),
+                );
+              } catch (e) {
+                print('Authentication error: $e');
+              }
+
+              if (isAuthenticated) {
+                showModalBottomSheet(
+                  context: context,
+                  isScrollControlled: true,
+                  backgroundColor: Colors.white,
+                  shape: const RoundedRectangleBorder(
+                    borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+                  ),
+                  builder: (context) => Padding(
+                    padding: EdgeInsets.only(
+                      bottom: MediaQuery.of(context).viewInsets.bottom,
+                    ),
+                    child: const SingleChildScrollView(child: UpdatePassword()),
+                  ),
+                );
+              } else {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(content: Text('Authentication failed')),
+                );
+              }
             },
             titleColor: Color(0xFF67AE6E), // Set title color
           ),
@@ -231,10 +268,12 @@ class _SettingsScreenState extends State<SettingsScreen> {
             subtitle: 'Permanently remove all data',
             // Apply red color to the icon
             trailing: const Icon(Icons.delete_outline, color: Colors.red),
-            onTap: () {
-              // Show confirmation dialog or perform delete action
-              print('Delete Account tapped');
-            },
+              onTap: () {
+                showDialog(
+                  context: context,
+                  builder: (_) => const DeleteAccount(),
+                );
+              }
           ),
 
           const SizedBox(height: 20), // Add some padding at the bottom
