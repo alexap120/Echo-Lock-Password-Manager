@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 
-class LoginDetailsBottomSheet extends StatelessWidget {
+class LoginDetailsBottomSheet extends StatefulWidget {
   final String serviceName;
   final String email;
   final String password;
@@ -15,6 +16,48 @@ class LoginDetailsBottomSheet extends StatelessWidget {
     this.sharedWith = const [],
     this.isPasswordWeak = false,
   }) : super(key: key);
+
+  @override
+  _LoginDetailsBottomSheetState createState() => _LoginDetailsBottomSheetState();
+}
+
+class _LoginDetailsBottomSheetState extends State<LoginDetailsBottomSheet> {
+  bool _isPasswordVisible = false;
+  bool _isEditing = false;
+
+  late TextEditingController _emailController;
+  late TextEditingController _passwordController;
+  late TextEditingController _serviceNameController;
+
+  // Keep additional fields but not editable, no add or delete
+  List<Map<String, TextEditingController>> _additionalFields = [];
+
+  @override
+  void initState() {
+    super.initState();
+    _emailController = TextEditingController(text: widget.email);
+    _passwordController = TextEditingController(text: widget.password);
+    _serviceNameController = TextEditingController(text: widget.serviceName);
+  }
+
+  @override
+  void dispose() {
+    _emailController.dispose();
+    _passwordController.dispose();
+    _serviceNameController.dispose();
+    for (var field in _additionalFields) {
+      field['key']!.dispose();
+      field['value']!.dispose();
+    }
+    super.dispose();
+  }
+
+  void _save() {
+    // Add validation and saving logic here if needed
+    setState(() {
+      _isEditing = false;
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -50,29 +93,56 @@ class LoginDetailsBottomSheet extends StatelessWidget {
                     child: Icon(Icons.lock_outline, color: Colors.green[800]),
                   ),
                   SizedBox(width: 10),
-                  Text(
-                    serviceName,
-                    style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+                  Expanded(
+                    child: _isEditing
+                        ? TextFormField(
+                      controller: _serviceNameController,
+                      decoration: InputDecoration(
+                        labelText: "Service Name",
+                      ),
+                    )
+                        : Text(
+                      widget.serviceName,
+                      style: TextStyle(
+                          fontSize: 20, fontWeight: FontWeight.bold),
+                    ),
                   ),
                 ],
               ),
               const SizedBox(height: 30),
-              _buildInfoRow("Login", email),
+              _buildEditableRow("Login", _emailController),
               const SizedBox(height: 20),
-              _buildInfoRow("Password", "••••••••"),
+              _buildEditablePasswordRow("Password", _passwordController),
               const SizedBox(height: 30),
-              if (sharedWith.isNotEmpty) ...[
-                Text("Shared To", style: TextStyle(fontWeight: FontWeight.bold)),
+
+              // Show additional fields but no edit/delete/add
+              ..._additionalFields.map((field) {
+                return Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      field['key']!.text,
+                      style: TextStyle(fontWeight: FontWeight.bold),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(field['value']!.text),
+                    const SizedBox(height: 20),
+                  ],
+                );
+              }),
+
+              if (widget.sharedWith.isNotEmpty && !_isEditing) ...[
+                Text("Shared To",
+                    style: TextStyle(fontWeight: FontWeight.bold)),
                 const SizedBox(height: 8),
                 Wrap(
                   spacing: 8,
-                  children: sharedWith
-                      .map((name) => Chip(label: Text(name)))
-                      .toList(),
+                  children:
+                  widget.sharedWith.map((name) => Chip(label: Text(name))).toList(),
                 ),
                 const SizedBox(height: 30),
               ],
-              if (isPasswordWeak)
+              if (widget.isPasswordWeak && !_isEditing)
                 Container(
                   padding: EdgeInsets.all(12),
                   decoration: BoxDecoration(
@@ -99,11 +169,22 @@ class LoginDetailsBottomSheet extends StatelessWidget {
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(12),
                   ),
+                  backgroundColor: Color(0xFF328E6E),
                 ),
-                icon: Icon(Icons.edit),
-                label: Text("Edit Vault Item"),
+                icon: Icon(_isEditing ? Icons.save : Icons.edit,
+                    color: Colors.white),
+                label: Text(
+                  _isEditing ? "Save Vault Item" : "Edit Vault Item",
+                  style: TextStyle(color: Colors.white),
+                ),
                 onPressed: () {
-                  // Handle edit
+                  if (_isEditing) {
+                    _save();
+                  } else {
+                    setState(() {
+                      _isEditing = true;
+                    });
+                  }
                 },
               ),
             ],
@@ -113,21 +194,119 @@ class LoginDetailsBottomSheet extends StatelessWidget {
     );
   }
 
-  Widget _buildInfoRow(String title, String value) {
+  Widget _buildEditableRow(String title, TextEditingController controller) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(title, style: TextStyle(fontWeight: FontWeight.bold)),
         const SizedBox(height: 4),
-        Row(
+        _isEditing
+            ? TextFormField(
+          controller: controller,
+          decoration: InputDecoration(
+            suffixIcon: IconButton(
+              icon: Icon(Icons.copy),
+              onPressed: () {
+                Clipboard.setData(ClipboardData(text: controller.text));
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(content: Text('$title copied to clipboard')),
+                );
+              },
+            ),
+          ),
+        )
+            : Row(
           children: [
             Expanded(
               child: Text(
-                value,
+                controller.text,
                 style: TextStyle(fontSize: 16),
               ),
             ),
-            Icon(Icons.copy, size: 18),
+            IconButton(
+              icon: Icon(Icons.copy, size: 18),
+              onPressed: () {
+                Clipboard.setData(ClipboardData(text: controller.text));
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(content: Text('$title copied to clipboard')),
+                );
+              },
+            ),
+          ],
+        ),
+      ],
+    );
+  }
+
+  Widget _buildEditablePasswordRow(String title, TextEditingController controller) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(title, style: TextStyle(fontWeight: FontWeight.bold)),
+        const SizedBox(height: 4),
+        _isEditing
+            ? TextFormField(
+          controller: controller,
+          obscureText: !_isPasswordVisible,
+          decoration: InputDecoration(
+            suffixIcon: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                IconButton(
+                  icon: Icon(
+                    _isPasswordVisible
+                        ? Icons.visibility_off
+                        : Icons.visibility,
+                  ),
+                  onPressed: () {
+                    setState(() {
+                      _isPasswordVisible = !_isPasswordVisible;
+                    });
+                  },
+                ),
+                IconButton(
+                  icon: Icon(Icons.copy),
+                  onPressed: () {
+                    Clipboard.setData(ClipboardData(text: controller.text));
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(content: Text('$title copied to clipboard')),
+                    );
+                  },
+                ),
+              ],
+            ),
+          ),
+        )
+            : Row(
+          children: [
+            Expanded(
+              child: Text(
+                _isPasswordVisible ? controller.text : "••••••••",
+                style: TextStyle(fontSize: 16),
+              ),
+            ),
+            IconButton(
+              icon: Icon(
+                _isPasswordVisible
+                    ? Icons.visibility_off
+                    : Icons.visibility,
+                size: 20,
+              ),
+              onPressed: () {
+                setState(() {
+                  _isPasswordVisible = !_isPasswordVisible;
+                });
+              },
+            ),
+            IconButton(
+              icon: Icon(Icons.copy, size: 18),
+              onPressed: () {
+                Clipboard.setData(ClipboardData(text: controller.text));
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(content: Text('$title copied to clipboard')),
+                );
+              },
+            ),
           ],
         ),
       ],
