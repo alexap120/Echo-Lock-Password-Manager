@@ -43,3 +43,15 @@ app.*.map.json
 /android/app/debug
 /android/app/profile
 /android/app/release
+macos/Flutter/ephemeral/FlutterOutputs.xcfilelist
+macos/Flutter/ephemeral/FlutterInputs.xcfilelist
+macos/Flutter/ephemeral/flutter_export_environment.sh
+macos/Flutter/ephemeral/Flutter-Generated.xcconfig
+macos/Flutter/ephemeral/.app_filename
+macos/Flutter/ephemeral/tripwire
+macos/Podfile
+macos/Flutter/GeneratedPluginRegistrant.swift
+ios/Podfile
+ios/Flutter/Release.xcconfig
+ios/Flutter/Debug.xcconfig
+ios/Flutter/Release.xcconfig
