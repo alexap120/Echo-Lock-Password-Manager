@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
-import 'package:password_manager/screens/home.dart';
-import 'package:password_manager/screens/resetPassword/enterEmail.dart';
-import '../widgets/custom_input_field.dart';
+import 'package:password_manager/screens/auth/resetPassword/enter_email.dart';
+import '../../widgets/custom_input_field.dart';
+import '../main_screens/home.dart';
 import 'login_password.dart';
 import 'register.dart';
 

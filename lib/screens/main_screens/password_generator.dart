@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
-import 'package:password_manager/screens/profile_page.dart';
-import '../widgets/custom_bottom_nav_bar.dart';
+import 'package:password_manager/screens/profile/profile_page.dart';
+import '../../widgets/custom_bottom_nav_bar.dart';
 
 class PasswordGeneratorWidget extends StatefulWidget {
   @override

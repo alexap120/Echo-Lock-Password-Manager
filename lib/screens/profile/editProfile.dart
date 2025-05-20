@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 
-import '../widgets/custom_input_field.dart';
+import '../../widgets/custom_input_field.dart';
 // To handle image picking (add 'image_picker' to your pubspec.yaml)
 // import 'package:image_picker/image_picker.dart';
 // import 'dart:io'; // Required if using File for image

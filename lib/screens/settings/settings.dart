@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
-import 'package:password_manager/screens/profile_page.dart';
-import 'package:password_manager/screens/update_password.dart';
+import 'package:password_manager/screens/profile/profile_page.dart';
+import 'package:password_manager/screens/settings/update_password.dart';
 import 'package:password_manager/widgets/custom_bottom_nav_bar.dart';
 import 'package:local_auth/local_auth.dart';
 

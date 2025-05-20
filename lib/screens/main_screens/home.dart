@@ -1,11 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_speed_dial/flutter_speed_dial.dart';
-import 'package:password_manager/screens/add_card.dart';
-import 'package:password_manager/screens/add_note.dart';
-import 'package:password_manager/screens/profile_page.dart';
-import '../widgets/custom_bottom_nav_bar.dart';
-import 'add_login.dart';
-import 'login_item_details.dart';
+import 'package:password_manager/screens/login_items/add_card.dart';
+import 'package:password_manager/screens/login_items/add_note.dart';
+import 'package:password_manager/screens/profile/profile_page.dart';
+import '../../widgets/custom_bottom_nav_bar.dart';
+import '../login_items/add_login.dart';
+import '../login_items/login_item_details.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({Key? key}) : super(key: key);

@@ -1,12 +1,11 @@
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
-import 'package:password_manager/screens/home.dart';
-import 'package:password_manager/screens/login.dart';
-import 'package:password_manager/screens/overview.dart';
-import 'package:password_manager/screens/settings.dart';
+import 'package:password_manager/screens/auth/login.dart';
+import 'package:password_manager/screens/main_screens/overview.dart';
+import 'package:password_manager/screens/settings/settings.dart';
 import 'package:animated_expandable_fab/animated_expandable_fab.dart';
-
-import '../screens/password_generator.dart';
+import '../screens/main_screens/home.dart';
+import '../screens/main_screens/password_generator.dart';
 
 class CustomBottomNavBar extends StatelessWidget {
   final int selectedIndex;

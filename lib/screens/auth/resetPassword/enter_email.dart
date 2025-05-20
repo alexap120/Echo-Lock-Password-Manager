@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
-import 'package:password_manager/screens/resetPassword/EnterCode.dart';
+import 'package:password_manager/screens/auth/resetPassword/enter_code.dart';
 
-import '../../widgets/custom_input_field.dart';
+import '../../../widgets/custom_input_field.dart';
 
 class ResetPasswordScreen extends StatelessWidget {
   const ResetPasswordScreen({super.key});

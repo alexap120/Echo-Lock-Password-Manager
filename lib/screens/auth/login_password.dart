@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:local_auth/local_auth.dart';
 import 'package:flutter/services.dart';
 
-import '../widgets/custom_input_field.dart';
+import '../../widgets/custom_input_field.dart';
 
 class EnterPasswordScreen extends StatefulWidget {
   const EnterPasswordScreen({super.key});

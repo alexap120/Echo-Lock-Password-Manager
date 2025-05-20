@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 
-import '../widgets/custom_input_field.dart';
+import '../../widgets/custom_input_field.dart';
 
 class UpdatePassword extends StatefulWidget {
   const UpdatePassword({super.key});
