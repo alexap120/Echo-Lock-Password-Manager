@@ -23,13 +23,28 @@ class _DashboardScreenState extends State<DashboardScreen> {
     });
   }
 
+  // Dummy data
+  final List<Map<String, String>> weakLogins = [
+    {'title': 'Facebook', 'email': 'weak1@email.com'},
+    {'title': 'Instagram', 'email': 'weak2@email.com'},
+  ];
+
+  final List<Map<String, String>> compromisedLogins = [
+    {'title': 'Yahoo', 'email': 'comp1@email.com'},
+  ];
+
+  final List<Map<String, String>> reusedLogins = [
+    {'title': 'Reddit', 'email': 'reuse@email.com'},
+    {'title': 'Twitter', 'email': 'reuse2@email.com'},
+  ];
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       extendBody: true,
       backgroundColor: Colors.grey[100],
       appBar: AppBar(
-        backgroundColor: Color(0xFF328E6E),
+        backgroundColor: const Color(0xFF328E6E),
         elevation: 0,
         leading: const Padding(
           padding: EdgeInsets.only(left: 16.0),
@@ -37,10 +52,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
         ),
         title: const Text(
           'ConceptX',
-          style: TextStyle(
-            fontWeight: FontWeight.bold,
-            color: Colors.white,
-          ),
+          style: TextStyle(fontWeight: FontWeight.bold, color: Colors.white),
         ),
         actions: [
           Padding(
@@ -60,7 +72,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                   ),
                 );
               },
-              child: CircleAvatar(
+              child: const CircleAvatar(
                 backgroundImage: AssetImage('assets/user.jpg'),
                 radius: 18,
               ),
@@ -70,7 +82,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
       ),
       body: Stack(
         children: [
-          // Circular green background (oversized and positioned)
+          // Green background curve
           Positioned(
             top: -150,
             left: -100,
@@ -79,21 +91,20 @@ class _DashboardScreenState extends State<DashboardScreen> {
               height: 500,
               decoration: const BoxDecoration(
                 borderRadius: BorderRadius.vertical(
-                  bottom: Radius.elliptical(300, 100), // controls arc curvature
+                  bottom: Radius.elliptical(300, 100),
                 ),
                 color: Color(0xFF328E6E),
               ),
             ),
           ),
 
-          // Main content
-          SingleChildScrollView(
-            padding: const EdgeInsets.symmetric(horizontal: 16),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [ // Adjust for visual space below the arc
-                const SizedBox(height: 30),
-                const Text(
+          // Fixed cards and scrollable list
+          Column(
+            children: [
+              const SizedBox(height: 30),
+              const Padding(
+                padding: EdgeInsets.symmetric(horizontal: 16.0),
+                child: Text(
                   'Password Health',
                   style: TextStyle(
                     fontWeight: FontWeight.bold,
@@ -101,8 +112,11 @@ class _DashboardScreenState extends State<DashboardScreen> {
                     fontSize: 18,
                   ),
                 ),
-                const SizedBox(height: 12),
-                GridView.count(
+              ),
+              const SizedBox(height: 12),
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 16),
+                child: GridView.count(
                   crossAxisCount: 2,
                   mainAxisSpacing: 12,
                   crossAxisSpacing: 12,
@@ -116,46 +130,103 @@ class _DashboardScreenState extends State<DashboardScreen> {
                     _buildHealthCard(Icons.refresh, '5', 'Reused', Colors.orange),
                   ],
                 ),
-                const SizedBox(height: 20),
-                const Text(
-                  'Most Used Logins',
-                  style: TextStyle(
-                    fontWeight: FontWeight.bold,
-                    color: Color(0xFF328E6E),
-                    fontSize: 18,
+              ),
+              const SizedBox(height: 16),
+              // Scrollable problem login items
+              Expanded(
+                child: NotificationListener<ScrollNotification>(
+                  onNotification: (_) => false,
+                  child: SingleChildScrollView(
+                    physics: const BouncingScrollPhysics(),
+                    padding: const EdgeInsets.symmetric(horizontal: 16),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        if (weakLogins.isNotEmpty) ...[
+                          Row(
+                            children: const [
+                              Icon(Icons.warning_amber_rounded, color: Colors.orange),
+                              SizedBox(width: 8),
+                              Text(
+                                'Weak',
+                                style: TextStyle(
+                                  fontWeight: FontWeight.bold,
+                                  color: Color(0xFF328E6E),
+                                  fontSize: 18,
+                                ),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 8),
+                          ...weakLogins.map((item) => _buildLoginTile(item['title']!, item['email']!, Icons.warning_amber_rounded)),
+                          const SizedBox(height: 16),
+                        ],
+                        if (compromisedLogins.isNotEmpty) ...[
+                          Row(
+                            children: const [
+                              Icon(Icons.error_outline, color: Colors.red),
+                              SizedBox(width: 8),
+                              Text(
+                                'Compromised',
+                                style: TextStyle(
+                                  fontWeight: FontWeight.bold,
+                                  color: Color(0xFF328E6E),
+                                  fontSize: 18,
+                                ),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 8),
+                          ...compromisedLogins.map((item) => _buildLoginTile(item['title']!, item['email']!, Icons.error_outline)),
+                          const SizedBox(height: 16),
+                        ],
+                        if (reusedLogins.isNotEmpty) ...[
+                          Row(
+                            children: const [
+                              Icon(Icons.refresh, color: Colors.orange),
+                              SizedBox(width: 8),
+                              Text(
+                                'Reused',
+                                style: TextStyle(
+                                  fontWeight: FontWeight.bold,
+                                  color: Color(0xFF328E6E),
+                                  fontSize: 18,
+                                ),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 8),
+                          ...reusedLogins.map((item) => _buildLoginTile(item['title']!, item['email']!, Icons.refresh)),
+                          const SizedBox(height: 100),
+                        ],
+                      ],
+                    ),
                   ),
                 ),
-                const SizedBox(height: 12),
-                _buildLoginTile('Google Account', 'john.doe@gmail.com', Icons.g_mobiledata),
-                _buildLoginTile('Amazon', 'john.doe@email.com', Icons.shopping_bag_outlined),
-                _buildLoginTile('Netflix', 'john.doe@email.com', Icons.tv),
-                const SizedBox(height: 80),
-              ],
-            ),
+              ),
+            ],
           ),
         ],
       ),
-
       bottomNavigationBar: CustomBottomNavBar(
         selectedIndex: _selectedIndex,
         onItemTapped: _onTabTapped,
       ),
-
       floatingActionButton: SpeedDial(
         animatedIcon: AnimatedIcons.menu_close,
-        backgroundColor: Color(0xFF328E6E),
+        backgroundColor: const Color(0xFF328E6E),
         foregroundColor: Colors.white,
         spacing: 8,
         children: [
           SpeedDialChild(
             child: const Icon(Icons.key),
-            backgroundColor: Color(0xFF67AE6E),
+            backgroundColor: const Color(0xFF67AE6E),
             foregroundColor: Colors.white,
             label: 'Add Login',
             labelStyle: const TextStyle(
-              color: Color(0xFF90C67C), // Custom text color
-              fontWeight: FontWeight.bold, // Custom font weight
-              fontSize: 16.0, // Custom font size
+              color: Color(0xFF90C67C),
+              fontWeight: FontWeight.bold,
+              fontSize: 16.0,
             ),
             onTap: () {
               Navigator.push(
@@ -166,13 +237,13 @@ class _DashboardScreenState extends State<DashboardScreen> {
           ),
           SpeedDialChild(
             child: const Icon(Icons.note_add_outlined),
-            backgroundColor: Color(0xFF67AE6E),
+            backgroundColor: const Color(0xFF67AE6E),
             foregroundColor: Colors.white,
             label: 'Add Note',
             labelStyle: const TextStyle(
-              color: Color(0xFF90C67C), // Custom text color
-              fontWeight: FontWeight.bold, // Custom font weight
-              fontSize: 16.0, // Custom font size
+              color: Color(0xFF90C67C),
+              fontWeight: FontWeight.bold,
+              fontSize: 16.0,
             ),
             onTap: () {
               Navigator.push(
@@ -184,22 +255,22 @@ class _DashboardScreenState extends State<DashboardScreen> {
           SpeedDialChild(
             child: const Icon(Icons.add_card_outlined),
             foregroundColor: Colors.white,
-            backgroundColor: Color(0xFF67AE6E),
+            backgroundColor: const Color(0xFF67AE6E),
             label: 'Add Card',
             labelStyle: const TextStyle(
-              color: Color(0xFF90C67C), // Custom text color
-              fontWeight: FontWeight.bold, // Custom font weight
-              fontSize: 16.0, // Custom font size
+              color: Color(0xFF90C67C),
+              fontWeight: FontWeight.bold,
+              fontSize: 16.0,
             ),
             onTap: () {
-                showModalBottomSheet(
-                  context: context,
-                  isScrollControlled: true,
-                  shape: const RoundedRectangleBorder(
-                    borderRadius: BorderRadius.vertical(top: Radius.circular(25)),
-                  ),
-                  builder: (context) => const AddCardPopup(),
-                );
+              showModalBottomSheet(
+                context: context,
+                isScrollControlled: true,
+                shape: const RoundedRectangleBorder(
+                  borderRadius: BorderRadius.vertical(top: Radius.circular(25)),
+                ),
+                builder: (context) => const AddCardPopup(),
+              );
             },
           ),
         ],
@@ -211,13 +282,13 @@ class _DashboardScreenState extends State<DashboardScreen> {
     return Container(
       decoration: BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.all(Radius.circular(10)),
+        borderRadius: const BorderRadius.all(Radius.circular(10)),
         boxShadow: [
           BoxShadow(
-            color: Colors.grey.withValues(alpha: 0.5),
+            color: Colors.grey.withAlpha(50),
             spreadRadius: -1,
             blurRadius: 7,
-            offset: Offset(0, 3), // changes position of shadow
+            offset: const Offset(0, 3),
           ),
         ],
       ),
@@ -226,7 +297,6 @@ class _DashboardScreenState extends State<DashboardScreen> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
-            crossAxisAlignment: CrossAxisAlignment.center,
             children: [
               Icon(icon, color: iconColor, size: 28),
               const SizedBox(width: 8),
@@ -250,20 +320,18 @@ class _DashboardScreenState extends State<DashboardScreen> {
     );
   }
 
-
   Widget _buildLoginTile(String title, String email, IconData leadingIcon) {
     return Container(
-
       margin: const EdgeInsets.only(bottom: 12),
       decoration: BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.all(Radius.circular(10)),
+        borderRadius: const BorderRadius.all(Radius.circular(10)),
         boxShadow: [
           BoxShadow(
-            color: Colors.grey.withValues(alpha: 0.5),
+            color: Colors.grey.withAlpha(50),
             spreadRadius: -1,
             blurRadius: 7,
-            offset: Offset(0, 3), // changes position of shadow
+            offset: const Offset(0, 3),
           ),
         ],
       ),
@@ -274,12 +342,14 @@ class _DashboardScreenState extends State<DashboardScreen> {
         ),
         title: Text(
           title,
-          style: const TextStyle(fontWeight: FontWeight.bold, color: Color(0xFF67AE6E)),
+          style: const TextStyle(
+            fontWeight: FontWeight.bold,
+            color: Color(0xFF67AE6E),
+          ),
         ),
         subtitle: Text(email),
         onTap: () {},
       ),
     );
   }
-
 }
