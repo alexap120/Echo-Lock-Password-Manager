@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:password_manager/screens/auth/resetPassword/enter_email.dart';
 import '../../widgets/custom_input_field.dart';
 import '../main_screens/home.dart';
-import 'login_password.dart';
 import 'register.dart';
 
 class LoginScreen extends StatefulWidget {

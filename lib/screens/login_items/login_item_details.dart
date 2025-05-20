@@ -9,13 +9,13 @@ class LoginDetailsBottomSheet extends StatefulWidget {
   final bool isPasswordWeak;
 
   const LoginDetailsBottomSheet({
-    Key? key,
+    super.key,
     required this.serviceName,
     required this.email,
     required this.password,
     this.sharedWith = const [],
     this.isPasswordWeak = false,
-  }) : super(key: key);
+  });
 
   @override
   _LoginDetailsBottomSheetState createState() => _LoginDetailsBottomSheetState();
@@ -30,7 +30,7 @@ class _LoginDetailsBottomSheetState extends State<LoginDetailsBottomSheet> {
   late TextEditingController _serviceNameController;
 
   // Keep additional fields but not editable, no add or delete
-  List<Map<String, TextEditingController>> _additionalFields = [];
+  final List<Map<String, TextEditingController>> _additionalFields = [];
 
   @override
   void initState() {

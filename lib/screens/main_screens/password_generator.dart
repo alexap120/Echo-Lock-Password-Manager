@@ -3,6 +3,8 @@ import 'package:password_manager/screens/profile/profile_page.dart';
 import '../../widgets/custom_bottom_nav_bar.dart';
 
 class PasswordGeneratorWidget extends StatefulWidget {
+  const PasswordGeneratorWidget({super.key});
+
   @override
   _PasswordGeneratorWidgetState createState() => _PasswordGeneratorWidgetState();
 }
@@ -14,7 +16,7 @@ class _PasswordGeneratorWidgetState extends State<PasswordGeneratorWidget> {
   bool _includeDigits = true;
   bool _includeSpecial = false;
 
-  String _generatedPassword = "TI65431EQYQFA9";
+  final String _generatedPassword = "TI65431EQYQFA9";
   int _selectedIndex = 3;
 
   void _onTabTapped(int index) {

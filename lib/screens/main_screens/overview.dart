@@ -8,7 +8,7 @@ import '../login_items/add_login.dart';
 import '../login_items/add_note.dart';
 
 class DashboardScreen extends StatefulWidget {
-  const DashboardScreen({Key? key}) : super(key: key);
+  const DashboardScreen({super.key});
 
   @override
   State<DashboardScreen> createState() => _DashboardScreenState();

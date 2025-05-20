@@ -8,7 +8,7 @@ import '../login_items/add_login.dart';
 import '../login_items/login_item_details.dart';
 
 class HomeScreen extends StatefulWidget {
-  const HomeScreen({Key? key}) : super(key: key);
+  const HomeScreen({super.key});
 
   @override
   State<HomeScreen> createState() => _HomeScreenState();

@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import '../../widgets/custom_input_field.dart';
 
 class AddNotePopup extends StatefulWidget {
+  const AddNotePopup({super.key});
+
   @override
   State<AddNotePopup> createState() => _AddNotePopupState();
 }

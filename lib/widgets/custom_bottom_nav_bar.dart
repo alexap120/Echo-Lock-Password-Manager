@@ -1,9 +1,6 @@
-import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
-import 'package:password_manager/screens/auth/login.dart';
 import 'package:password_manager/screens/main_screens/overview.dart';
 import 'package:password_manager/screens/settings/settings.dart';
-import 'package:animated_expandable_fab/animated_expandable_fab.dart';
 import '../screens/main_screens/home.dart';
 import '../screens/main_screens/password_generator.dart';
 
@@ -12,10 +9,10 @@ class CustomBottomNavBar extends StatelessWidget {
   final Function(int) onItemTapped;
 
   const CustomBottomNavBar({
-    Key? key,
+    super.key,
     required this.selectedIndex,
     required this.onItemTapped,
-  }) : super(key: key);
+  });
 
   @override
   Widget build(BuildContext context) {

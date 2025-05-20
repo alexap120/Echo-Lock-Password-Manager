@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import '../../widgets/custom_input_field.dart';
 
 class AddLoginPopup extends StatefulWidget {
+  const AddLoginPopup({super.key});
+
   @override
   State<AddLoginPopup> createState() => _AddLoginPopupState();
 }

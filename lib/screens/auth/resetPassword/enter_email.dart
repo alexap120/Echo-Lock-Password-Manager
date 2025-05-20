@@ -8,7 +8,7 @@ class ResetPasswordScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final _emailController = TextEditingController();
+    final emailController = TextEditingController();
     return Scaffold(
       backgroundColor: Colors.white,
       body: SafeArea(
@@ -45,7 +45,7 @@ class ResetPasswordScreen extends StatelessWidget {
               CustomInputField(
                 label: 'Email',
                 //hintText: 'Enter your email',
-                controller: _emailController,
+                controller: emailController,
                 keyboardType: TextInputType.emailAddress,
             //    icon: Icons.email_outlined,
               ),

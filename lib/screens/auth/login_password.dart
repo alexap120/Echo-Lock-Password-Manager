@@ -13,7 +13,7 @@ class EnterPasswordScreen extends StatefulWidget {
 
 class _EnterPasswordScreenState extends State<EnterPasswordScreen> {
   bool _obscureText = true;
-  bool _staySignedIn = false;
+  final bool _staySignedIn = false;
   final _passwordController = TextEditingController();
   final LocalAuthentication _localAuth = LocalAuthentication();
 

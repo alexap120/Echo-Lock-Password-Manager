@@ -18,7 +18,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
   final _repeatPasswordController = TextEditingController();
 
   bool _obscurePassword = true;
-  bool _obscureRepeatPassword = true;
+  final bool _obscureRepeatPassword = true;
 
   @override
   Widget build(BuildContext context) {
