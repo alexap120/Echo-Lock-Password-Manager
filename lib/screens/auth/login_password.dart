@@ -1,8 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:local_auth/local_auth.dart';
 import 'package:flutter/services.dart';
+import 'package:password_manager/screens/main_screens/home.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 import '../../widgets/custom_input_field.dart';
+import 'auth_service.dart';
 
 class EnterPasswordScreen extends StatefulWidget {
   const EnterPasswordScreen({super.key});
@@ -16,6 +19,30 @@ class _EnterPasswordScreenState extends State<EnterPasswordScreen> {
   final bool _staySignedIn = false;
   final _passwordController = TextEditingController();
   final LocalAuthentication _localAuth = LocalAuthentication();
+  String _firstName = '';
+  String _lastName = '';
+  String _savedEmail = '';
+
+
+  Future<void> _loadUserName() async {
+    final prefs = await SharedPreferences.getInstance();
+    setState(() {
+      _firstName = prefs.getString('firstName') ?? '';
+      _lastName = prefs.getString('lastName') ?? '';
+      _savedEmail = prefs.getString('remembered_email') ?? '';
+    });
+  }
+
+
+  @override
+  void initState() {
+    super.initState();
+    _loadUserName();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _authenticateWithBiometrics();
+    });
+  }
+
 
   @override
   void dispose() {
@@ -39,9 +66,9 @@ class _EnterPasswordScreenState extends State<EnterPasswordScreen> {
       }
 
       if (isAuthenticated) {
-        // TODO: Navigate to home or next screen
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text("Biometric Auth successful")),
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(builder: (context) => const HomeScreen()),
         );
       }
     } on PlatformException catch (e) {
@@ -50,6 +77,7 @@ class _EnterPasswordScreenState extends State<EnterPasswordScreen> {
       );
     }
   }
+
 
   @override
   Widget build(BuildContext context) {
@@ -84,14 +112,14 @@ class _EnterPasswordScreenState extends State<EnterPasswordScreen> {
                         const SizedBox(width: 16),
                         Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
-                          children: const [
+                          children: [
                             Text(
                               'Enter your password',
                               style: TextStyle(color: Colors.grey, fontSize: 14),
                             ),
                             Text(
-                              'Sarah Bills',
-                              style: TextStyle(
+                              '$_firstName $_lastName',
+                              style: const TextStyle(
                                 fontWeight: FontWeight.w600,
                                 fontSize: 16,
                                 color: Colors.black,
@@ -145,8 +173,23 @@ class _EnterPasswordScreenState extends State<EnterPasswordScreen> {
                 width: double.infinity,
                 height: 50,
                 child: ElevatedButton(
-                  onPressed: () {
-                    // TODO: Handle continue action
+                  onPressed: () async {
+
+                    String? result = await AuthService().signInWithEmail(
+                      email: _savedEmail,
+                      password: _passwordController.text.trim(),
+                    );
+
+                    if (result == null) {
+                      Navigator.pushReplacement(
+                        context,
+                        MaterialPageRoute(builder: (context) => const HomeScreen()),
+                      );
+                    } else {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(content: Text(result)),
+                      );
+                    }
                   },
                   style: ElevatedButton.styleFrom(
                     backgroundColor: const Color(0xFF328E6E),
@@ -156,7 +199,7 @@ class _EnterPasswordScreenState extends State<EnterPasswordScreen> {
                       borderRadius: BorderRadius.circular(14),
                     ),
                   ),
-                  child: const Text(
+                  child: Text(
                     'Continue',
                     style: TextStyle(fontSize: 16),
                   ),

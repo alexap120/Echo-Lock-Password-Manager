@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
-
+import 'package:shared_preferences/shared_preferences.dart';
+import '../auth/auth_service.dart';
+import '../auth/login.dart';
 import 'editProfile.dart';
 
 class ProfilePopup extends StatelessWidget {
@@ -85,8 +87,14 @@ class ProfilePopup extends StatelessWidget {
               style: TextButton.styleFrom(
                 backgroundColor: Colors.red[50],
               ),
-              onPressed: () {
-                // Handle sign out
+              onPressed: () async {
+                await AuthService().signOut();  // Your sign out logic
+                final prefs = await SharedPreferences.getInstance();
+                await prefs.clear(); // Reset remember_me on sign out
+                Navigator.of(context).pushAndRemoveUntil(
+                  MaterialPageRoute(builder: (context) => const LoginScreen()),
+                      (route) => false,
+                );
               },
             ),
           ),

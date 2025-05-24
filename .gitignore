@@ -12,18 +12,16 @@
 .swiftpm/
 migrate_working_dir/
 
-# IntelliJ related
+# IntelliJ / Android Studio
 *.iml
 *.ipr
 *.iws
 .idea/
 
-# The .vscode folder contains launch configuration and tasks you configure in
-# VS Code which you may wish to be included in version control, so this line
-# is commented out by default.
+# VSCode - uncomment if you don’t want to commit your personal launch configs
 #.vscode/
 
-# Flutter/Dart/Pub related
+# Flutter / Dart / Pub related
 **/doc/api/
 **/ios/Flutter/.last_build_id
 .dart_tool/
@@ -32,26 +30,24 @@ migrate_working_dir/
 .pub-cache/
 .pub/
 /build/
+.packages
+.metadata
 
-# Symbolication related
+# Symbolication and obfuscation
 app.*.symbols
-
-# Obfuscation related
 app.*.map.json
 
-# Android Studio will place build artifacts here
+# Android specific
 /android/app/debug
 /android/app/profile
 /android/app/release
-macos/Flutter/ephemeral/FlutterOutputs.xcfilelist
-macos/Flutter/ephemeral/FlutterInputs.xcfilelist
-macos/Flutter/ephemeral/flutter_export_environment.sh
-macos/Flutter/ephemeral/Flutter-Generated.xcconfig
-macos/Flutter/ephemeral/.app_filename
-macos/Flutter/ephemeral/tripwire
+
+# macOS specific
+macos/Flutter/ephemeral/*
 macos/Podfile
 macos/Flutter/GeneratedPluginRegistrant.swift
+
+# iOS specific
 ios/Podfile
 ios/Flutter/Release.xcconfig
 ios/Flutter/Debug.xcconfig
-ios/Flutter/Release.xcconfig

@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:password_manager/screens/auth/resetPassword/enter_email.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import '../../widgets/custom_input_field.dart';
 import '../main_screens/home.dart';
+import 'auth_service.dart';
 import 'register.dart';
 
 class LoginScreen extends StatefulWidget {
@@ -137,13 +139,32 @@ class _LoginScreenState extends State<LoginScreen> {
                   const SizedBox(width: 12),
                   Expanded(
                     child: ElevatedButton(
-                      onPressed: () {
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(builder: (context) => HomeScreen()),
-                        );
-                      },
-                      style: ElevatedButton.styleFrom(
+                        onPressed: () async {
+                          final email = emailController.text.trim();
+                          final password = passwordController.text;
+
+                          String? result = await AuthService().signInWithEmail(
+                            email: email,
+                            password: password,
+                          );
+
+                          if (result == null) {
+                            if (rememberMe) {
+                              final prefs = await SharedPreferences.getInstance();
+                              await prefs.setBool('remember_me', true);
+                              await prefs.setString('remembered_email', email); // optional
+                            }
+                            Navigator.pushReplacement(
+                              context,
+                              MaterialPageRoute(builder: (context) => const HomeScreen()),
+                            );
+                          } else {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              SnackBar(content: Text(result)),
+                            );
+                          }
+                        },
+                        style: ElevatedButton.styleFrom(
                         backgroundColor: const Color(0xFF328E6E),
                         foregroundColor: Colors.white,
                         padding: const EdgeInsets.symmetric(vertical: 14),

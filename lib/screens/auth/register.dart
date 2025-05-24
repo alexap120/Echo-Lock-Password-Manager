@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+import 'auth_service.dart';
 import 'login.dart';
 import '/widgets/custom_input_field.dart';
 
@@ -19,6 +21,19 @@ class _RegisterScreenState extends State<RegisterScreen> {
 
   bool _obscurePassword = true;
   final bool _obscureRepeatPassword = true;
+
+  Future<void> saveUserInfo({
+    required String firstName,
+    required String lastName,
+    required String email,
+    required String username,
+  }) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString('firstName', firstName);
+    await prefs.setString('lastName', lastName);
+    await prefs.setString('email', email);
+    await prefs.setString('username', username);
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -116,27 +131,49 @@ class _RegisterScreenState extends State<RegisterScreen> {
                 width: double.infinity,
                 height: 48,
                 child: ElevatedButton(
-                  onPressed: () {
-                    // Register logic here
-                    String firstName = _firstNameController.text;
-                    String lastName = _lastNameController.text;
-                    String username = _usernameController.text;
-                    String email = _emailController.text;
-                    String password = _passwordController.text;
-                    String repeatPassword = _repeatPasswordController.text;
+                  onPressed: () async {
+                    final firstName = _firstNameController.text.trim();
+                    final lastName = _lastNameController.text.trim();
+                    final username = _usernameController.text.trim();
+                    final email = _emailController.text.trim();
+                    final password = _passwordController.text;
+                    final repeatPassword = _repeatPasswordController.text;
 
-                    // You can now use these values for your registration process
-                    print('First Name: $firstName');
-                    print('Last Name: $lastName');
-                    print('Username: $username');
-                    print('Email: $email');
-                    print('Password: $password');
-                    print('Repeat Password: $repeatPassword');
+                    if (password != repeatPassword) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(content: Text("Passwords do not match")),
+                      );
+                      return;
+                    }
 
-                    // Add your actual registration logic here,
-                    // including password matching and API calls.
+                    String? result = await AuthService().registerWithEmail(
+                      email: email,
+                      password: password,
+                      firstName: firstName,
+                      lastName: lastName,
+                      username: username,
+                    );
+
+                    if (result == null) {
+                      // Save user info locally
+                      await saveUserInfo(
+                        firstName: firstName,
+                        lastName: lastName,
+                        email: email,
+                        username: username,
+                      );
+
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(content: Text("Account created. Verify your email.")),
+                      );
+                      Navigator.pop(context);
+                    } else {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(content: Text(result)),
+                      );
+                    }
                   },
-                  style: ElevatedButton.styleFrom(
+                    style: ElevatedButton.styleFrom(
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(12),
                     ),
