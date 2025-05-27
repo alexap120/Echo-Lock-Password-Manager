@@ -1,11 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 import '../../widgets/custom_input_field.dart';
-// To handle image picking (add 'image_picker' to your pubspec.yaml)
-// import 'package:image_picker/image_picker.dart';
-// import 'dart:io'; // Required if using File for image
 
-// Define the primary color from the design (adjust hex code if needed)
 const Color primaryColor = Color(0xFF1ABC9C); // Example Teal color
 const Color textFieldBackgroundColor = Color(0xFFF2F2F7); // Light greyish background
 const Color labelColor = Colors.black87;
@@ -20,11 +17,16 @@ class EditProfileScreen extends StatefulWidget {
 
 class _EditProfileScreenState extends State<EditProfileScreen> {
   // Controllers for text fields
-  late TextEditingController _nameController;
+  late TextEditingController _firstNameController;
+  late TextEditingController _lastNameController;
   late TextEditingController _usernameController;
   late TextEditingController _phoneController;
   late TextEditingController _emailController;
 
+  String _firstName = '';
+  String _lastName = '';
+  String _username = '';
+  String _savedEmail = '';
 
   // Placeholder for the selected image file (uncomment if using image_picker)
   // File? _profileImage;
@@ -33,20 +35,25 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
   @override
   void initState() {
     super.initState();
-    _nameController = TextEditingController(text: 'Alexandre Pereira');
-    _usernameController = TextEditingController(text: 'alexP123');
-    _phoneController = TextEditingController(text: '+44 1632 960860');
-    _emailController = TextEditingController(text: 'alex@example.com');
+    _initializeControllers();
   }
 
-  @override
-  void dispose() {
-    _nameController.dispose();
-    _usernameController.dispose();
-    _phoneController.dispose();
-    _emailController.dispose();
-    super.dispose();
+  Future<void> _initializeControllers() async {
+    final prefs = await SharedPreferences.getInstance();
+    final firstName = prefs.getString('firstName') ?? '';
+    final lastName = prefs.getString('lastName') ?? '';
+    final username = prefs.getString('username') ?? '';
+    final email = prefs.getString('email') ?? '';
+
+    setState(() {
+      _firstNameController = TextEditingController(text: firstName);
+      _lastNameController = TextEditingController(text: lastName);
+      _usernameController = TextEditingController(text: username);
+      _emailController = TextEditingController(text: email);
+      _phoneController = TextEditingController(text: ''); // Or load if stored
+    });
   }
+
 
   // --- Function to handle image picking ---
   Future<void> _pickImage() async {
@@ -189,11 +196,21 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
 
               // --- Name Field ---
               CustomInputField(
-                label: 'Name',
+                label: 'First Name',
           //      hintText: '',
-                controller: _nameController,
+                controller: _firstNameController,
                 keyboardType: TextInputType.text,
           //      icon: Icons.person,
+              ),
+              const SizedBox(height: 16),
+
+              // --- Last Name Field ---
+              CustomInputField(
+                label: 'Last Name',
+                //      hintText: '',
+                controller: _lastNameController,
+                keyboardType: TextInputType.text,
+                //      icon: Icons.person,
               ),
               const SizedBox(height: 16),
 
@@ -232,18 +249,20 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
               SizedBox(
                 width: double.infinity,
                 child: ElevatedButton(
-                  onPressed: () {
-                    final name = _nameController.text;
+                  onPressed: () async {
+                    final firstName = _firstNameController.text;
+                    final lastName = _lastNameController.text;
                     final username = _usernameController.text;
                     final phone = _phoneController.text;
                     final email = _emailController.text;
                     // Include image saving logic if _profileImage is used
 
-                    print('Saving Profile:');
-                    print('Name: $name');
-                    print('Username: $username');
-                    print('Phone: $phone');
-                    print('Email: $email');
+                    final prefs = await SharedPreferences.getInstance();
+                    await prefs.setString('firstName', firstName);
+                    await prefs.setString('lastName', lastName);
+                    await prefs.setString('username', username);
+                    await prefs.setString('email', email);
+
                     // print('Image Path: ${_profileImage?.path}'); // If using image
 
                     ScaffoldMessenger.of(context).showSnackBar(

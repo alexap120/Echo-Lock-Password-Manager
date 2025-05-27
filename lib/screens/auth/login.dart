@@ -2,9 +2,11 @@ import 'package:flutter/material.dart';
 import 'package:password_manager/screens/auth/resetPassword/enter_email.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../../widgets/custom_input_field.dart';
+import '../addPhone.dart';
 import '../main_screens/home.dart';
 import 'auth_service.dart';
 import 'register.dart';
+import 'package:intl/intl.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -121,10 +123,6 @@ class _LoginScreenState extends State<LoginScreen> {
                           context,
                           MaterialPageRoute(builder: (context) => const RegisterScreen()),
                         );
-                       /*Navigator.push(
-                          context,
-                          MaterialPageRoute(builder: (context) => EnterPasswordScreen()),
-                        );*/
                       },
                       style: OutlinedButton.styleFrom(
                         foregroundColor: Colors.black,
@@ -143,24 +141,67 @@ class _LoginScreenState extends State<LoginScreen> {
                           final email = emailController.text.trim();
                           final password = passwordController.text;
 
-                          String? result = await AuthService().signInWithEmail(
+                          if ([email, password].any((e) => e.isEmpty)) {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(content: Text("Please fill in all fields.")),
+                            );
+                            return;
+                          }
+
+                          final result = await AuthService().signInWithEmail(
                             email: email,
                             password: password,
                           );
 
-                          if (result == null) {
+                          if (result is String) {
+                            // An error message returned
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              SnackBar(content: Text(result)),
+                            );
+                          } else if (result is Map<String, dynamic>) {
+                            // Success: Save user profile to SharedPreferences
+                            final prefs = await SharedPreferences.getInstance();
                             if (rememberMe) {
-                              final prefs = await SharedPreferences.getInstance();
                               await prefs.setBool('remember_me', true);
                               await prefs.setString('remembered_email', email); // optional
                             }
-                            Navigator.pushReplacement(
-                              context,
-                              MaterialPageRoute(builder: (context) => const HomeScreen()),
-                            );
+
+                            final DateTime? createdAt = result['createdAt']?.toDate();
+                            final String formattedDate = createdAt != null
+                                ? DateFormat('dd-MM-yyyy').format(createdAt)
+                                : '';
+
+                            await prefs.setString('firstName', result['firstName'] ?? '');
+                            await prefs.setString('lastName', result['lastName'] ?? '');
+                            await prefs.setString('username', result['username'] ?? '');
+                            await prefs.setString('email', result['email'] ?? '');
+                            await prefs.setString('memberSince', formattedDate);
+
+                            // CHECK PHONE VERIFICATION
+                            final phoneNumber = result['phoneNumber'];
+                            final phoneVerified = result['phoneVerified'] == true;
+
+                            print('User data on login: $result');
+                            print('Phone number: ${result['phoneNumber']}');
+                            print('Phone verified: ${result['phoneVerified']}');
+
+
+                            if (phoneNumber == null || !phoneVerified) {
+                              // User needs to add/verify phone number
+                              Navigator.pushReplacement(
+                                context,
+                                MaterialPageRoute(builder: (context) => AddPhoneScreen()),
+                              );
+                            } else {
+                              Navigator.pushReplacement(
+                                context,
+                                MaterialPageRoute(builder: (context) => const HomeScreen()),
+                              );
+                            }
                           } else {
+                            // Unexpected case
                             ScaffoldMessenger.of(context).showSnackBar(
-                              SnackBar(content: Text(result)),
+                              const SnackBar(content: Text("Unexpected login error.")),
                             );
                           }
                         },

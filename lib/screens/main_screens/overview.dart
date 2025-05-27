@@ -63,13 +63,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                   context: context,
                   isScrollControlled: true,
                   backgroundColor: Colors.transparent,
-                  builder: (context) => ProfilePopup(
-                    fullName: 'Alexandre Pereira',
-                    username: 'AlexP123',
-                    email: 'alex@example.com',
-                    memberSince: 'March 2024',
-                    profileImageUrl: 'https://your-image-url.com/photo.jpg',
-                  ),
+                  builder: (context) => ProfilePopup(),
                 );
               },
               child: const CircleAvatar(

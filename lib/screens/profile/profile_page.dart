@@ -4,21 +4,42 @@ import '../auth/auth_service.dart';
 import '../auth/login.dart';
 import 'editProfile.dart';
 
-class ProfilePopup extends StatelessWidget {
-  final String fullName;
-  final String username;
-  final String email;
-  final String memberSince;
-  final String profileImageUrl;
+class ProfilePopup extends StatefulWidget {
+  const ProfilePopup({super.key});
 
-  const ProfilePopup({
-    super.key,
-    required this.fullName,
-    required this.username,
-    required this.email,
-    required this.memberSince,
-    required this.profileImageUrl,
-  });
+  @override
+  State<ProfilePopup> createState() => _ProfilePopupState();
+}
+
+class _ProfilePopupState extends State<ProfilePopup> {
+  String fullName = 'Loading...';
+  String username = '';
+  String email = '';
+  String memberSince = '';
+  String profileImageUrl = 'https://via.placeholder.com/150'; // placeholder
+
+  @override
+  void initState() {
+    super.initState();
+    _loadUserData();
+  }
+
+  Future<void> _loadUserData() async {
+    final prefs = await SharedPreferences.getInstance();
+    final firstName = prefs.getString('firstName') ?? '';
+    final lastName = prefs.getString('lastName') ?? '';
+    final uname = prefs.getString('username') ?? '';
+    final mail = prefs.getString('email') ?? '';
+    final joinedAt = prefs.getString('memberSince') ?? '';
+
+    setState(() {
+      fullName = '$firstName $lastName';
+      username = uname;
+      email = mail;
+      memberSince = joinedAt;
+      // Optionally, update profileImageUrl if stored
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -66,11 +87,10 @@ class ProfilePopup extends StatelessWidget {
               icon: const Icon(Icons.settings),
               label: const Text("Manage Account"),
               style: ElevatedButton.styleFrom(
-                backgroundColor: Color(0xFF328E6E),
+                backgroundColor: const Color(0xFF328E6E),
                 foregroundColor: Colors.white,
               ),
               onPressed: () {
-                // Navigate to account settings
                 Navigator.push(
                   context,
                   MaterialPageRoute(builder: (context) => EditProfileScreen()),
@@ -88,9 +108,9 @@ class ProfilePopup extends StatelessWidget {
                 backgroundColor: Colors.red[50],
               ),
               onPressed: () async {
-                await AuthService().signOut();  // Your sign out logic
+                await AuthService().signOut();
                 final prefs = await SharedPreferences.getInstance();
-                await prefs.clear(); // Reset remember_me on sign out
+                await prefs.clear(); // clear all stored user data
                 Navigator.of(context).pushAndRemoveUntil(
                   MaterialPageRoute(builder: (context) => const LoginScreen()),
                       (route) => false,

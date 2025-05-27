@@ -20,7 +20,14 @@ class _RegisterScreenState extends State<RegisterScreen> {
   final _repeatPasswordController = TextEditingController();
 
   bool _obscurePassword = true;
-  final bool _obscureRepeatPassword = true;
+  bool _obscureRepeatPassword = true;
+
+  bool isStrongPassword(String password) {
+    final passwordRegex = RegExp(
+      r'^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[!@#\$%^&*(),.?":{}|<>]).{8,}$',
+    );
+    return passwordRegex.hasMatch(password);
+  }
 
   Future<void> saveUserInfo({
     required String firstName,
@@ -103,7 +110,8 @@ class _RegisterScreenState extends State<RegisterScreen> {
                 label: 'Password',
                 controller: _passwordController,
                 obscureText: _obscurePassword,
-                optionalIcon: _obscurePassword ? Icons.visibility : Icons.visibility_off,
+                optionalIcon: _obscurePassword ? Icons.visibility : Icons
+                    .visibility_off,
                 onOptionalIconTap: () {
                   setState(() {
                     _obscurePassword = !_obscurePassword;
@@ -114,13 +122,14 @@ class _RegisterScreenState extends State<RegisterScreen> {
 
               // Repeat Password field
               CustomInputField(
-                label: 'Password',
+                label: 'Repeat Password',
                 controller: _repeatPasswordController,
-                obscureText: _obscurePassword,
-                optionalIcon: _obscurePassword ? Icons.visibility : Icons.visibility_off,
+                obscureText: _obscureRepeatPassword,
+                optionalIcon: _obscureRepeatPassword ? Icons.visibility : Icons
+                    .visibility_off,
                 onOptionalIconTap: () {
                   setState(() {
-                    _obscurePassword = !_obscurePassword;
+                    _obscureRepeatPassword = !_obscureRepeatPassword;
                   });
                 },
               ),
@@ -138,6 +147,42 @@ class _RegisterScreenState extends State<RegisterScreen> {
                     final email = _emailController.text.trim();
                     final password = _passwordController.text;
                     final repeatPassword = _repeatPasswordController.text;
+
+                    if ([
+                      firstName,
+                      lastName,
+                      username,
+                      email,
+                      password,
+                      repeatPassword
+                    ].any((e) => e.isEmpty)) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(content: Text(
+                            "Please fill in all fields.")),
+                      );
+                      return;
+                    }
+                    if (username.length < 3) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(content: Text(
+                            "Username must be at least 3 characters long.")),
+                      );
+                      return;
+                    }
+
+
+                    if (!isStrongPassword(password)) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(
+                          content: Text(
+                            "Password must be at least 8 characters and include an uppercase letter, "
+                                "a lowercase letter, a number, and a special character.",
+                          ),
+                        ),
+                      );
+                      return;
+                    }
+
 
                     if (password != repeatPassword) {
                       ScaffoldMessenger.of(context).showSnackBar(
@@ -164,7 +209,8 @@ class _RegisterScreenState extends State<RegisterScreen> {
                       );
 
                       ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(content: Text("Account created. Verify your email.")),
+                        const SnackBar(content: Text(
+                            "Account created. Verify your email.")),
                       );
                       Navigator.pop(context);
                     } else {
@@ -173,7 +219,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                       );
                     }
                   },
-                    style: ElevatedButton.styleFrom(
+                  style: ElevatedButton.styleFrom(
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(12),
                     ),

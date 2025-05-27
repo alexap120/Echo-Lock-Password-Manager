@@ -1,3 +1,4 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:local_auth/local_auth.dart';
 import 'package:flutter/services.dart';
@@ -5,6 +6,7 @@ import 'package:password_manager/screens/main_screens/home.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import '../../widgets/custom_input_field.dart';
+import '../addPhone.dart';
 import 'auth_service.dart';
 
 class EnterPasswordScreen extends StatefulWidget {
@@ -66,6 +68,37 @@ class _EnterPasswordScreenState extends State<EnterPasswordScreen> {
       }
 
       if (isAuthenticated) {
+        // Check phone number in Firestore after biometric auth
+        final prefs = await SharedPreferences.getInstance();
+        final savedEmail = prefs.getString('remembered_email') ?? '';
+
+        if (savedEmail.isNotEmpty) {
+          try {
+            final querySnapshot = await FirebaseFirestore.instance
+                .collection('users')
+                .where('email', isEqualTo: savedEmail)
+                .limit(1)
+                .get();
+
+            if (querySnapshot.docs.isNotEmpty) {
+              final data = querySnapshot.docs.first.data();
+              final phoneNumber = data['phoneNumber'];
+              final phoneVerified = data['phoneVerified'] == true;
+
+              if (phoneNumber == null || !phoneVerified) {
+                Navigator.pushReplacement(
+                  context,
+                  MaterialPageRoute(builder: (context) => AddPhoneScreen()),
+                );
+                return;
+              }
+            }
+          } catch (e) {
+            // Handle Firestore error if needed
+          }
+        }
+
+        // If phone present and verified or email missing fallback to home
         Navigator.pushReplacement(
           context,
           MaterialPageRoute(builder: (context) => const HomeScreen()),
@@ -77,6 +110,7 @@ class _EnterPasswordScreenState extends State<EnterPasswordScreen> {
       );
     }
   }
+
 
 
   @override
@@ -174,13 +208,39 @@ class _EnterPasswordScreenState extends State<EnterPasswordScreen> {
                 height: 50,
                 child: ElevatedButton(
                   onPressed: () async {
-
                     String? result = await AuthService().signInWithEmail(
                       email: _savedEmail,
                       password: _passwordController.text.trim(),
                     );
 
                     if (result == null) {
+                      // Sign in successful, now check phone number:
+                      try {
+                        final querySnapshot = await FirebaseFirestore.instance
+                            .collection('users')
+                            .where('email', isEqualTo: _savedEmail)
+                            .limit(1)
+                            .get();
+
+                        if (querySnapshot.docs.isNotEmpty) {
+                          final data = querySnapshot.docs.first.data();
+                          final phoneNumber = data['phoneNumber'];
+                          final phoneVerified = data['phoneVerified'] == true;
+
+                          if (phoneNumber == null || !phoneVerified) {
+                            // Navigate to AddPhoneScreen if phone missing or unverified
+                            Navigator.pushReplacement(
+                              context,
+                              MaterialPageRoute(builder: (context) => AddPhoneScreen()),
+                            );
+                            return; // exit early so it does not continue to HomeScreen
+                          }
+                        }
+                      } catch (e) {
+                        // Optionally handle Firestore errors here
+                      }
+
+                      // If phone number is present and verified, go to HomeScreen
                       Navigator.pushReplacement(
                         context,
                         MaterialPageRoute(builder: (context) => const HomeScreen()),

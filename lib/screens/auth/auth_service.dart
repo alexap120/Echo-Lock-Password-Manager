@@ -5,7 +5,6 @@ class AuthService {
   final FirebaseAuth _auth = FirebaseAuth.instance;
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
 
-
   //Register a new user with email and password
   Future<String?> registerWithEmail({
     required String email,
@@ -27,6 +26,8 @@ class AuthService {
         'username': username,
         'email': email,
         'createdAt': FieldValue.serverTimestamp(),
+        'phoneNumber': '',
+        'phoneVerified': false,
       });
 
       await user.sendEmailVerification();
@@ -39,22 +40,42 @@ class AuthService {
     }
   }
 
-
   //Sign in with email and password
-  Future<String?> signInWithEmail({
+  // Now returns Map<String, dynamic>? with user profile on success, or String error message
+  Future<dynamic> signInWithEmail({
     required String email,
     required String password,
   }) async {
     try {
+      UserCredential userCredential =
       await _auth.signInWithEmailAndPassword(email: email, password: password);
 
-      if (!_auth.currentUser!.emailVerified) {
+      User? user = userCredential.user;
+
+      if (user == null) {
+        return 'User not found after login.';
+      }
+
+      if (!user.emailVerified) {
         await _auth.signOut();
         return 'Please verify your email before logging in.';
       }
 
-      return null; // success
+      // Fetch user profile data from Firestore
+      DocumentSnapshot<Map<String, dynamic>> userDoc =
+      await _firestore.collection('users').doc(user.uid).get();
+
+      if (!userDoc.exists) {
+        return 'User profile data not found.';
+      }
+
+      Map<String, dynamic>? userData = userDoc.data();
+
+      // Return the user data (firstName, lastName, username, email)
+      return userData;
     } on FirebaseAuthException catch (e) {
+      print('FirebaseAuthException [${e.code}]: ${e.message}');
+
       switch (e.code) {
         case 'user-not-found':
           return 'No user found for that email.';
@@ -62,8 +83,14 @@ class AuthService {
           return 'Incorrect password.';
         case 'invalid-email':
           return 'Invalid email format.';
+        case 'invalid-credential':
+          return 'Invalid login credentials. Please check your password.';
+        case 'user-disabled':
+          return 'This account has been disabled.';
+        case 'too-many-requests':
+          return 'Too many attempts. Please try again later.';
         default:
-          return 'Login error: ${e.message}';
+          return 'Login error [${e.code}]: ${e.message}';
       }
     } catch (e) {
       return 'Unexpected error: $e';
@@ -71,10 +98,26 @@ class AuthService {
   }
 
   Future<void> signOut() async {
-    FirebaseAuth.instance.signOut();
+    await FirebaseAuth.instance.signOut();
   }
 
-
+  Future<String?> sendPasswordResetEmail(String email) async {
+    try {
+      await _auth.sendPasswordResetEmail(email: email);
+      return null; // success
+    } on FirebaseAuthException catch (e) {
+      switch (e.code) {
+        case 'user-not-found':
+          return 'No user found for that email.';
+        case 'invalid-email':
+          return 'Invalid email address.';
+        default:
+          return 'Error: ${e.message}';
+      }
+    } catch (e) {
+      return 'Unexpected error: $e';
+    }
+  }
 }
 
 String _handleFirebaseAuthError(FirebaseAuthException e) {
