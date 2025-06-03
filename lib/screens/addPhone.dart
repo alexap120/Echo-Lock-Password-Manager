@@ -1,6 +1,8 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:intl_phone_field/intl_phone_field.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 import 'main_screens/home.dart';
 
@@ -37,7 +39,15 @@ class _AddPhoneScreenState extends State<AddPhoneScreen> {
         // You can sign in the user directly here or do nothing
         try {
           await _auth.currentUser?.linkWithCredential(credential);
-          // Navigate to home or next screen
+          final user = _auth.currentUser;
+          if (user != null) {
+            await FirebaseFirestore.instance.collection('users').doc(user.uid).update({
+              'phoneNumber': _completePhoneNumber, // or _completePhoneNumber
+              'phoneVerified': true,
+            });
+            final prefs = await SharedPreferences.getInstance();
+            await prefs.setString('phoneNumber', _completePhoneNumber!);
+          }
           Navigator.pushReplacement(
             context,
             MaterialPageRoute(builder: (context) => const HomeScreen()),
@@ -209,6 +219,15 @@ class _VerifyPhoneScreenState extends State<VerifyPhoneScreen> {
   }
 
   void _verifyCode(String code) async {
+    final user = _auth.currentUser;
+    if (user != null) {
+      await FirebaseFirestore.instance.collection('users').doc(user.uid).update({
+        'phoneNumber': widget.phoneNumber, // or _completePhoneNumber
+        'phoneVerified': true,
+      });
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setString('phoneNumber', widget.phoneNumber);
+    }
     setState(() {
       _isVerifying = true;
     });

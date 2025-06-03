@@ -1,4 +1,7 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
+import 'package:password_manager/screens/main_screens/home.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import '../../widgets/custom_input_field.dart';
@@ -22,12 +25,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
   late TextEditingController _usernameController;
   late TextEditingController _phoneController;
   late TextEditingController _emailController;
-
-  String _firstName = '';
-  String _lastName = '';
-  String _username = '';
-  String _savedEmail = '';
-
+  dynamic _profileImage;
   // Placeholder for the selected image file (uncomment if using image_picker)
   // File? _profileImage;
   // final ImagePicker _picker = ImagePicker(); // Image picker instance
@@ -44,13 +42,14 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
     final lastName = prefs.getString('lastName') ?? '';
     final username = prefs.getString('username') ?? '';
     final email = prefs.getString('email') ?? '';
+    final phoneNumber = prefs.getString('phoneNumber') ?? '';
 
     setState(() {
       _firstNameController = TextEditingController(text: firstName);
       _lastNameController = TextEditingController(text: lastName);
       _usernameController = TextEditingController(text: username);
       _emailController = TextEditingController(text: email);
-      _phoneController = TextEditingController(text: ''); // Or load if stored
+      _phoneController = TextEditingController(text: phoneNumber); // Or load if stored
     });
   }
 
@@ -119,19 +118,14 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
       child: Stack(
         children: <Widget>[
           CircleAvatar(
-            radius: 60, // Adjust size as needed
-            backgroundColor: Colors.grey[300], // Placeholder background
-            // --- Uncomment to display selected image ---
-            // backgroundImage: _profileImage != null
-            //     ? FileImage(_profileImage!) // Display selected image
-            //     : null, // Or a default asset image: AssetImage('assets/default_avatar.png'),
+            radius: 60,
+            backgroundColor: Colors.grey[300],
+            backgroundImage: _profileImage != null
+                ? FileImage(_profileImage!) // User-selected image
+                : AssetImage('assets/user.jpg') as ImageProvider, // Default image
             child: _profileImage == null
-                ? Icon(
-              Icons.person, // Placeholder icon
-              size: 60,
-              color: Colors.grey[600],
-            )
-                : null, // Don't show icon if image is present
+                ? Icon(Icons.person, size: 60, color: Colors.grey[600])
+                : null,
           ),
           Positioned(
             bottom: 0,
@@ -250,6 +244,8 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                 width: double.infinity,
                 child: ElevatedButton(
                   onPressed: () async {
+
+
                     final firstName = _firstNameController.text;
                     final lastName = _lastNameController.text;
                     final username = _usernameController.text;
@@ -257,13 +253,30 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                     final email = _emailController.text;
                     // Include image saving logic if _profileImage is used
 
+                    final user = FirebaseAuth.instance.currentUser;
+                    if (user != null) {
+                      await FirebaseFirestore.instance.collection('users').doc(user.uid).update({
+                        'firstName': firstName,
+                        'lastName': lastName,
+                        'username': username,
+                        'phoneNumber': phone,
+                        'email': email,
+                      });
+                    }
+
                     final prefs = await SharedPreferences.getInstance();
                     await prefs.setString('firstName', firstName);
                     await prefs.setString('lastName', lastName);
                     await prefs.setString('username', username);
                     await prefs.setString('email', email);
+                    await prefs.setString('phoneNumber', phone);
 
                     // print('Image Path: ${_profileImage?.path}'); // If using image
+
+                    Navigator.pushReplacement(
+                      context,
+                      MaterialPageRoute(builder: (context) => HomeScreen()),
+                    );
 
                     ScaffoldMessenger.of(context).showSnackBar(
                       const SnackBar(content: Text('Profile Saved!')),
@@ -288,7 +301,4 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
       ),
     );
   }
-
-  // Placeholder for the image state variable (needed if uncommenting image logic)
-  dynamic _profileImage; // Use 'File?' if using dart:io
 }

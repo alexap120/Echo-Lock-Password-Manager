@@ -16,6 +16,7 @@ class DashboardScreen extends StatefulWidget {
 
 class _DashboardScreenState extends State<DashboardScreen> {
   int _selectedIndex = 1;
+  dynamic _profileImage;
 
   void _onTabTapped(int index) {
     setState(() {
@@ -66,10 +67,16 @@ class _DashboardScreenState extends State<DashboardScreen> {
                   builder: (context) => ProfilePopup(),
                 );
               },
-              child: const CircleAvatar(
-                backgroundImage: AssetImage('assets/user.jpg'),
-                radius: 18,
-              ),
+              child: CircleAvatar(
+                radius: 20,
+                backgroundColor: Colors.grey[300],
+                backgroundImage: _profileImage != null
+                    ? FileImage(_profileImage!) // User-selected image
+                    : null, // Default image
+                child: _profileImage == null
+                    ? Icon(Icons.person, size: 30, color: Colors.grey[600])
+                    : null,
+              )
             ),
           ),
         ],

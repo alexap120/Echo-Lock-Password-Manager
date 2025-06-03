@@ -3,6 +3,7 @@ import 'package:password_manager/screens/profile/profile_page.dart';
 import 'package:password_manager/screens/settings/update_password.dart';
 import 'package:password_manager/widgets/custom_bottom_nav_bar.dart';
 import 'package:local_auth/local_auth.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 import 'delete_account.dart';
 
@@ -15,12 +16,65 @@ class SettingsScreen extends StatefulWidget {
 }
 
 class _SettingsScreenState extends State<SettingsScreen> {
-  bool _isBiometricEnabled = true; // State for the switch
+  bool _isBiometricEnabled = false; // State for the switch
   int _selectedIndex = 4;
-  int _autoLockMinutes = 5;
+  int _autoLockMinutes = 1;
+  dynamic _profileImage;
 
   void _onTabTapped(int index) {
     setState(() => _selectedIndex = index);
+  }
+
+
+  @override
+  void initState() {
+    super.initState();
+    _loadBiometricPreference();
+  }
+
+
+  Future<void> _loadBiometricPreference() async {
+    final prefs = await SharedPreferences.getInstance();
+    setState(() {
+      _isBiometricEnabled = prefs.getBool('biometric_enabled') ?? false;
+    });
+  }
+
+  Future<void> _updateBiometricPreference(bool enabled) async {
+    final auth = LocalAuthentication();
+    bool canCheck = await auth.canCheckBiometrics;
+
+    if (!canCheck) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Biometric authentication not available')),
+      );
+      return;
+    }
+
+    bool authenticated = false;
+    try {
+      authenticated = await auth.authenticate(
+        localizedReason: enabled
+            ? 'Enable biometric login'
+            : 'Authenticate to disable biometric login',
+        options: const AuthenticationOptions(
+          biometricOnly: true,
+          stickyAuth: true,
+        ),
+      );
+    } catch (e) {
+      print("Auth error: $e");
+    }
+
+    if (authenticated) {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setBool('biometric_enabled', enabled);
+      setState(() => _isBiometricEnabled = enabled);
+    } else {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Authentication failed')),
+      );
+    }
   }
 
   void _showAutoLockBottomSheet() {
@@ -109,8 +163,14 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 );
               },
               child: CircleAvatar(
-                backgroundImage: AssetImage('assets/user.jpg'),
-                radius: 18,
+                radius: 20,
+                backgroundColor: Colors.grey[300],
+                backgroundImage: _profileImage != null
+                    ? FileImage(_profileImage!) // User-selected image
+                    :null, // Default image
+                child: _profileImage == null
+                    ? Icon(Icons.person, size: 30, color: Colors.grey[600])
+                    : null,
               ),
             ),
           ),
@@ -196,22 +256,16 @@ class _SettingsScreenState extends State<SettingsScreen> {
             trailing: Switch(
               value: _isBiometricEnabled,
               onChanged: (bool value) {
-                setState(() {
-                  _isBiometricEnabled = value;
-                });
-                print('Biometric Login toggled: $value');
+                _updateBiometricPreference(value);
               },
-              activeColor: Color(0xFF328E6E), // Use theme color
+              activeColor: Color(0xFF328E6E),
             ),
-            // Wrap the card in an InkWell to trigger the onChanged method
             onTap: () {
-              setState(() {
-                _isBiometricEnabled = !_isBiometricEnabled; // Toggle the switch state
-              });
-              print('Biometric Login toggled by card tap: $_isBiometricEnabled');
+              _updateBiometricPreference(!_isBiometricEnabled);
             },
             titleColor: Color(0xFF67AE6E),
           ),
+
 
           // 2FA Card
           _buildSettingsCard(

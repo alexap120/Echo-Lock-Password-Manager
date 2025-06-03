@@ -17,6 +17,7 @@ class _ProfilePopupState extends State<ProfilePopup> {
   String email = '';
   String memberSince = '';
   String profileImageUrl = 'https://via.placeholder.com/150'; // placeholder
+  dynamic _profileImage;
 
   @override
   void initState() {
@@ -59,8 +60,14 @@ class _ProfilePopupState extends State<ProfilePopup> {
         mainAxisSize: MainAxisSize.min,
         children: [
           CircleAvatar(
-            radius: 40,
-            backgroundImage: NetworkImage(profileImageUrl),
+            radius: 50,
+            backgroundColor: Colors.grey[300],
+            backgroundImage: _profileImage != null
+                ? FileImage(_profileImage!) // User-selected image
+                : AssetImage('assets/user.jpg') as ImageProvider, // Default image
+            child: _profileImage == null
+                ? Icon(Icons.person, size: 60, color: Colors.grey[600])
+                : null,
           ),
           const SizedBox(height: 12),
           Text(

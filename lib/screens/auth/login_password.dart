@@ -24,6 +24,8 @@ class _EnterPasswordScreenState extends State<EnterPasswordScreen> {
   String _firstName = '';
   String _lastName = '';
   String _savedEmail = '';
+  dynamic _profileImage;
+  bool _showBiometricButton = false;
 
 
   Future<void> _loadUserName() async {
@@ -36,13 +38,28 @@ class _EnterPasswordScreenState extends State<EnterPasswordScreen> {
   }
 
 
+  Future<void> _checkBiometricAvailability() async {
+    final prefs = await SharedPreferences.getInstance();
+    final biometricsEnabled = prefs.getBool('biometric_enabled') ?? false;
+    final canCheckBiometrics = await _localAuth.canCheckBiometrics;
+
+    final shouldShow = biometricsEnabled && canCheckBiometrics;
+
+    setState(() {
+      _showBiometricButton = shouldShow;
+    });
+
+    if (shouldShow) {
+      // Trigger biometric authentication automatically
+      _authenticateWithBiometrics();
+    }
+  }
+
   @override
   void initState() {
     super.initState();
     _loadUserName();
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      _authenticateWithBiometrics();
-    });
+    _checkBiometricAvailability();
   }
 
 
@@ -139,9 +156,15 @@ class _EnterPasswordScreenState extends State<EnterPasswordScreen> {
                     const SizedBox(height: 30),
                     Row(
                       children: [
-                        const CircleAvatar(
-                          radius: 30,
-                          backgroundImage: AssetImage('assets/user.jpg'),
+                        CircleAvatar(
+                          radius: 50,
+                          backgroundColor: Colors.grey[300],
+                          backgroundImage: _profileImage != null
+                              ? FileImage(_profileImage!) // User-selected image
+                              : null, // Default image
+                          child: _profileImage == null
+                              ? Icon(Icons.person, size: 60, color: Colors.grey[600])
+                              : null,
                         ),
                         const SizedBox(width: 16),
                         Column(
@@ -180,41 +203,48 @@ class _EnterPasswordScreenState extends State<EnterPasswordScreen> {
                 ),
               ),
 
-              // Biometric Button
-              SizedBox(
-                width: double.infinity,
-                height: 50,
-                child: OutlinedButton.icon(
-                  onPressed: _authenticateWithBiometrics,
-                  icon: const Icon(Icons.fingerprint),
-                  label: const Text(
-                    'Use Biometrics',
-                    style: TextStyle(fontSize: 16),
-                  ),
-                  style: OutlinedButton.styleFrom(
-                    foregroundColor: const Color(0xFF0C2340),
-                    side: const BorderSide(color: Color(0xFF0C2340)),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(14),
+              // Conditionally show biometric button
+              if (_showBiometricButton)
+                SizedBox(
+                  width: double.infinity,
+                  height: 50,
+                  child: OutlinedButton.icon(
+                    onPressed: _authenticateWithBiometrics,
+                    icon: const Icon(Icons.fingerprint),
+                    label: const Text(
+                      'Use Biometrics',
+                      style: TextStyle(fontSize: 16),
+                    ),
+                    style: OutlinedButton.styleFrom(
+                      foregroundColor: const Color(0xFF0C2340),
+                      side: const BorderSide(color: Color(0xFF0C2340)),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(14),
+                      ),
                     ),
                   ),
                 ),
-              ),
-              const SizedBox(height: 12),
+
+              if (_showBiometricButton) const SizedBox(height: 12),
 
               // Continue Button
               SizedBox(
                 width: double.infinity,
                 height: 50,
                 child: ElevatedButton(
-                  onPressed: () async {
-                    String? result = await AuthService().signInWithEmail(
+                  onPressed: _savedEmail.isEmpty ? null : () async {
+                    final result = await AuthService().signInWithEmail(
                       email: _savedEmail,
                       password: _passwordController.text.trim(),
                     );
 
-                    if (result == null) {
-                      // Sign in successful, now check phone number:
+                    if (result is String) {
+                      // Error message
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(content: Text("An unexpected error occurred")),
+                      );
+                    } else {
+                      // Success: check phone number, then navigate
                       try {
                         final querySnapshot = await FirebaseFirestore.instance
                             .collection('users')
@@ -228,26 +258,20 @@ class _EnterPasswordScreenState extends State<EnterPasswordScreen> {
                           final phoneVerified = data['phoneVerified'] == true;
 
                           if (phoneNumber == null || !phoneVerified) {
-                            // Navigate to AddPhoneScreen if phone missing or unverified
                             Navigator.pushReplacement(
                               context,
                               MaterialPageRoute(builder: (context) => AddPhoneScreen()),
                             );
-                            return; // exit early so it does not continue to HomeScreen
+                            return;
                           }
                         }
                       } catch (e) {
                         // Optionally handle Firestore errors here
                       }
 
-                      // If phone number is present and verified, go to HomeScreen
                       Navigator.pushReplacement(
                         context,
                         MaterialPageRoute(builder: (context) => const HomeScreen()),
-                      );
-                    } else {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        SnackBar(content: Text(result)),
                       );
                     }
                   },

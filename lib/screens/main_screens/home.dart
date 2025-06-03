@@ -19,7 +19,7 @@ class _HomeScreenState extends State<HomeScreen> {
   final TextEditingController _searchController = TextEditingController();
   String _searchQuery = '';
   String _selectedChip = 'All'; // Track which chip is selected
-
+  dynamic _profileImage;
 
   final List<Map<String, dynamic>> items = [
     {'title': 'Login A', 'email': 'someEmail@gmail.com', 'shared': false},
@@ -74,9 +74,15 @@ class _HomeScreenState extends State<HomeScreen> {
                 );
               },
               child: CircleAvatar(
-                backgroundImage: AssetImage('assets/user.jpg'),
-                radius: 18,
-              ),
+                radius: 20,
+                backgroundColor: Colors.grey[300],
+                backgroundImage: _profileImage != null
+                    ? FileImage(_profileImage!) // User-selected image
+                    : null, // Default image
+                child: _profileImage == null
+                    ? Icon(Icons.person, size: 30, color: Colors.grey[600])
+                    : null,
+              )
             ),
           ),
         ],

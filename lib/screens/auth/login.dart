@@ -175,7 +175,12 @@ class _LoginScreenState extends State<LoginScreen> {
                             await prefs.setString('lastName', result['lastName'] ?? '');
                             await prefs.setString('username', result['username'] ?? '');
                             await prefs.setString('email', result['email'] ?? '');
+                            await prefs.setString('phoneNumber', result['phoneNumber'] ?? '');
                             await prefs.setString('memberSince', formattedDate);
+
+                            if (!prefs.containsKey('biometric_enabled')) {
+                              await prefs.setBool('biometric_enabled', false);
+                            }
 
                             // CHECK PHONE VERIFICATION
                             final phoneNumber = result['phoneNumber'];

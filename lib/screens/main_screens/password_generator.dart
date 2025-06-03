@@ -1,23 +1,123 @@
+import 'dart:math';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:password_manager/screens/profile/profile_page.dart';
+import '../../services/password_breach_service.dart';
+import '../../widgets/breach_warning.dart';
 import '../../widgets/custom_bottom_nav_bar.dart';
 
 class PasswordGeneratorWidget extends StatefulWidget {
   const PasswordGeneratorWidget({super.key});
 
   @override
-  _PasswordGeneratorWidgetState createState() => _PasswordGeneratorWidgetState();
+  _PasswordGeneratorWidgetState createState() =>
+      _PasswordGeneratorWidgetState();
 }
 
 class _PasswordGeneratorWidgetState extends State<PasswordGeneratorWidget> {
-  double _passwordLength = 15;
+  double _passwordLength = 18;
   bool _includeUppercase = true;
-  bool _includeLowercase = false;
+  bool _includeLowercase = true;
   bool _includeDigits = true;
-  bool _includeSpecial = false;
+  bool _includeSpecial = true;
+  dynamic _profileImage;
+  final breachService = PasswordBreachService();
 
-  final String _generatedPassword = "TI65431EQYQFA9";
+  bool get _isPasswordValid {
+    return _generatedPassword != "Generate password" &&
+        _generatedPassword != "Select at least one option";
+  }
+  String _generatedPassword = "Generate password";
   int _selectedIndex = 3;
+
+
+  Map<String, dynamic> _evaluatePasswordStrength(String password) {
+    if (password == "Select at least one option" || password == "Generate password") {
+      return {"label": "No options selected", "color": Colors.grey[400]};
+    }
+
+    int score = 0;
+
+    // Length-based scoring
+    if (password.length >= 25) {
+      score += 3;
+    } else if (password.length >= 17) {
+      score += 2;
+    } else if (password.length >= 12) {
+      score += 1;
+    }
+
+    // Character variety scoring
+    if (RegExp(r'[A-Z]').hasMatch(password)) score++;
+    if (RegExp(r'[a-z]').hasMatch(password)) score++;
+    if (RegExp(r'\d').hasMatch(password)) score++;
+    if (RegExp(r'[!@#%^&*\$#()\-_+=\[{\]}\\|;:,<.>/?~]').hasMatch(password)) score++;
+
+    // Total score is now between 0 and 7
+    if (score <= 2) {
+      return {"label": "Poor password strength", "color": Colors.red[400]};
+    } else if (score <= 4) {
+      return {"label": "Medium password strength", "color": Colors.orange[400]};
+    } else if (score <= 6) {
+      return {"label": "Good password strength", "color": Colors.green[400]};
+    } else {
+      return {"label": "Excellent password strength", "color": Colors.green[700]};
+    }
+  }
+
+
+
+  Widget _buildPasswordStrengthIndicator(String password) {
+    final result = _evaluatePasswordStrength(password);
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: result["color"],
+        borderRadius: BorderRadius.circular(4),
+      ),
+      child: Text(
+        result["label"],
+        style: const TextStyle(color: Colors.white),
+        textAlign: TextAlign.center,
+      ),
+    );
+  }
+
+
+  @override
+  void initState() {
+    super.initState();
+    _generatePassword(); // Generate default password
+  }
+
+  void _generatePassword() {
+    const String uppercase = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
+    const String lowercase = 'abcdefghijklmnopqrstuvwxyz';
+    const String digits = '0123456789';
+    const String special = '!@#%^&*\$#()-_=+[{]}\\|;:,<.>/?~';
+    String chars = '';
+    if (_includeUppercase) chars += uppercase;
+    if (_includeLowercase) chars += lowercase;
+    if (_includeDigits) chars += digits;
+    if (_includeSpecial) chars += special;
+
+    if (chars.isEmpty) {
+      setState(() => _generatedPassword = "Select at least one option");
+      return;
+    }
+
+    final rand = Random();
+    final charList = chars.split('');
+    final password = List.generate(
+      _passwordLength.toInt(),
+          (_) => charList[rand.nextInt(charList.length)],
+    );
+
+    setState(() {
+      _generatedPassword = password.join();
+    });
+  }
 
   void _onTabTapped(int index) {
     setState(() => _selectedIndex = index);
@@ -51,9 +151,15 @@ class _PasswordGeneratorWidgetState extends State<PasswordGeneratorWidget> {
                   builder: (context) => ProfilePopup(),
                 );
               },
-              child: const CircleAvatar(
-                backgroundImage: AssetImage('assets/user.jpg'),
-                radius: 18,
+              child: CircleAvatar(
+                radius: 20,
+                backgroundColor: Colors.grey[300],
+                backgroundImage: _profileImage != null
+                    ? FileImage(_profileImage!)
+                    : null,
+                child: _profileImage == null
+                    ? Icon(Icons.person, size: 30, color: Colors.grey[600])
+                    : null,
               ),
             ),
           ),
@@ -84,7 +190,7 @@ class _PasswordGeneratorWidgetState extends State<PasswordGeneratorWidget> {
                   width: double.infinity,
                   padding: const EdgeInsets.all(16),
                   decoration: BoxDecoration(
-                    color: Color(0xFFE1EEBC),
+                    color: const Color(0xFFE1EEBC),
                     borderRadius: BorderRadius.circular(8),
                   ),
                   child: Center(
@@ -99,23 +205,14 @@ class _PasswordGeneratorWidgetState extends State<PasswordGeneratorWidget> {
                   ),
                 ),
                 const SizedBox(height: 10),
-                Container(
-                  width: double.infinity,
-                  padding: const EdgeInsets.all(12),
-                  decoration: BoxDecoration(
-                    color: Colors.red[400],
-                    borderRadius: BorderRadius.circular(4),
-                  ),
-                  child: const Text(
-                    "Poor password strength",
-                    style: TextStyle(color: Colors.white),
-                    textAlign: TextAlign.center,
-                  ),
-                ),
+                _buildPasswordStrengthIndicator(_generatedPassword),
                 const SizedBox(height: 30),
                 const Text(
                   "Customize password",
-                  style: TextStyle(color: Color(0xFF328E6E), fontSize: 16, fontWeight: FontWeight.bold),
+                  style: TextStyle(
+                      color: Color(0xFF328E6E),
+                      fontSize: 16,
+                      fontWeight: FontWeight.bold),
                 ),
                 const SizedBox(height: 20),
                 Row(
@@ -133,66 +230,110 @@ class _PasswordGeneratorWidgetState extends State<PasswordGeneratorWidget> {
                 ),
                 Slider(
                   value: _passwordLength,
-                  min: 4,
+                  min: 8,
                   max: 32,
-                  divisions: 28,
+                  divisions: 24,
                   activeColor: Color(0xFF328E6E),
                   inactiveColor: Colors.grey,
                   onChanged: (value) {
                     setState(() {
                       _passwordLength = value;
+                      _generatePassword();
                     });
                   },
                 ),
                 const SizedBox(height: 20),
-                _buildCheckboxTile("Lowercase letters (a-z)", _includeLowercase,
-                        (val) => setState(() => _includeLowercase = val)),
-                _buildCheckboxTile("Uppercase letters (A-Z)", _includeUppercase,
-                        (val) => setState(() => _includeUppercase = val)),
-                _buildCheckboxTile("Digits (0-9)", _includeDigits,
-                        (val) => setState(() => _includeDigits = val)),
-                _buildCheckboxTile("Special characters (@*\$#!/)", _includeSpecial,
-                        (val) => setState(() => _includeSpecial = val)),
+                _buildCheckboxTile("Lowercase letters (a-z)", _includeLowercase, (val) {
+                  setState(() {
+                    _includeLowercase = val;
+                    _generatePassword();
+                  });
+                }),
+                _buildCheckboxTile("Uppercase letters (A-Z)", _includeUppercase, (val) {
+                  setState(() {
+                    _includeUppercase = val;
+                    _generatePassword();
+                  });
+                }),
+                _buildCheckboxTile("Digits (0-9)", _includeDigits, (val) {
+                  setState(() {
+                    _includeDigits = val;
+                    _generatePassword();
+                  });
+                }),
+                _buildCheckboxTile("Special characters (@*\$#!/)", _includeSpecial, (val) {
+                  setState(() {
+                    _includeSpecial = val;
+                    _generatePassword();
+                  });
+                }),
                 const SizedBox(height: 40),
                 Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    Container(
-                      width: 70,
-                      height: 70,
-                      decoration: const BoxDecoration(
-                        shape: BoxShape.circle,
-                        color: Color(0xFF328E6E),
-                      ),
-                      child: IconButton(
-                        icon: const Icon(Icons.refresh, color: Colors.white, size: 30),
-                        onPressed: () {
-                          // Add logic to generate a new password
-                        },
-                      ),
-                    ),
-                    const SizedBox(width: 16),
-                    ElevatedButton(
-                      onPressed: () {
-                        // Copy password logic
-                      },
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: const Color(0xFF328E6E),
-                        padding: const EdgeInsets.symmetric(horizontal: 40, vertical: 20), // Bigger padding
-                        minimumSize: const Size(250, 56), // Minimum size for consistent button sizing
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(32),
+                    Expanded(
+                      child: SizedBox(
+                        height: 56,
+                        child: ElevatedButton(
+                          onPressed: _generatePassword,
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: const Color(0xFF328E6E),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(32), // Circular look
+                            ),
+                          ),
+                          child: const Icon(Icons.refresh, color: Colors.white, size: 28),
                         ),
                       ),
-                      child: const Text(
-                        "Copy password",
-                        style: TextStyle(fontSize: 18, color: Colors.white), // Bigger text
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: SizedBox(
+                        height: 56,
+                        child: ElevatedButton(
+                          onPressed: _checkPasswordBreach,
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: const Color(0xFF328E6E),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(32),
+                            ),
+                          ),
+                          child: const Icon(Icons.check, color: Colors.white, size: 28),
+                        ),
                       ),
                     ),
-
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: SizedBox(
+                        height: 56,
+                        child: ElevatedButton(
+                          onPressed: _isPasswordValid
+                              ? () {
+                            Clipboard.setData(ClipboardData(text: _generatedPassword));
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              SnackBar(
+                                content: const Text("Password copied to clipboard"),
+                                backgroundColor: Colors.green[600],
+                                behavior: SnackBarBehavior.floating,
+                                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                                margin: const EdgeInsets.all(16),
+                                duration: const Duration(seconds: 2),
+                              ),
+                            );
+                          }
+                              : null,
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: const Color(0xFF328E6E),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(32),
+                            ),
+                          ),
+                          child: const Icon(Icons.copy, color: Colors.white, size: 28),
+                        ),
+                      ),
+                    ),
                   ],
                 ),
-                const SizedBox(height: 80), // For spacing above bottom nav
+                const SizedBox(height: 80),
               ],
             ),
           ),
@@ -213,4 +354,23 @@ class _PasswordGeneratorWidgetState extends State<PasswordGeneratorWidget> {
       activeColor: Color(0xFF328E6E),
     );
   }
+
+  Future<void> _checkPasswordBreach() async {
+    try {
+      final count = await breachService.checkPassword(_generatedPassword);
+      if (count > 0) {
+            showBreachWarning(context, count, onGenerateNew: _generatePassword);
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Password not found in breaches.')),
+        );
+      }
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Error checking breach: $e')),
+      );
+    }
+  }
 }
+
+
