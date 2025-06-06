@@ -2,6 +2,7 @@ import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:password_manager/screens/profile/profile_page.dart';
+import '../../models/password_generator_util.dart';
 import '../../services/password_breach_service.dart';
 import '../../widgets/breach_warning.dart';
 import '../../widgets/custom_bottom_nav_bar.dart';
@@ -92,32 +93,24 @@ class _PasswordGeneratorWidgetState extends State<PasswordGeneratorWidget> {
   }
 
   void _generatePassword() {
-    const String uppercase = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
-    const String lowercase = 'abcdefghijklmnopqrstuvwxyz';
-    const String digits = '0123456789';
-    const String special = '!@#%^&*\$#()-_=+[{]}\\|;:,<.>/?~';
-    String chars = '';
-    if (_includeUppercase) chars += uppercase;
-    if (_includeLowercase) chars += lowercase;
-    if (_includeDigits) chars += digits;
-    if (_includeSpecial) chars += special;
-
-    if (chars.isEmpty) {
-      setState(() => _generatedPassword = "Select at least one option");
-      return;
+    try {
+      final password = generatePassword(
+        length: _passwordLength.toInt(),
+        includeUppercase: _includeUppercase,
+        includeLowercase: _includeLowercase,
+        includeDigits: _includeDigits,
+        includeSpecial: _includeSpecial,
+      );
+      setState(() {
+        _generatedPassword = password;
+      });
+    } catch (e) {
+      setState(() {
+        _generatedPassword = "Select at least one option";
+      });
     }
-
-    final rand = Random();
-    final charList = chars.split('');
-    final password = List.generate(
-      _passwordLength.toInt(),
-          (_) => charList[rand.nextInt(charList.length)],
-    );
-
-    setState(() {
-      _generatedPassword = password.join();
-    });
   }
+
 
   void _onTabTapped(int index) {
     setState(() => _selectedIndex = index);

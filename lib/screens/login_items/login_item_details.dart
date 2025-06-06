@@ -1,20 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
+import '../../models/login_item.dart';
+
 class LoginDetailsBottomSheet extends StatefulWidget {
-  final String serviceName;
-  final String email;
-  final String password;
-  final List<String> sharedWith;
-  final bool isPasswordWeak;
+  final LoginItem loginItem;
 
   const LoginDetailsBottomSheet({
     super.key,
-    required this.serviceName,
-    required this.email,
-    required this.password,
-    this.sharedWith = const [],
-    this.isPasswordWeak = false,
+    required this.loginItem,
   });
 
   @override
@@ -25,7 +19,7 @@ class _LoginDetailsBottomSheetState extends State<LoginDetailsBottomSheet> {
   bool _isPasswordVisible = false;
   bool _isEditing = false;
 
-  late TextEditingController _emailController;
+  late TextEditingController _usernameController;
   late TextEditingController _passwordController;
   late TextEditingController _serviceNameController;
 
@@ -35,14 +29,14 @@ class _LoginDetailsBottomSheetState extends State<LoginDetailsBottomSheet> {
   @override
   void initState() {
     super.initState();
-    _emailController = TextEditingController(text: widget.email);
-    _passwordController = TextEditingController(text: widget.password);
-    _serviceNameController = TextEditingController(text: widget.serviceName);
+    _usernameController = TextEditingController(text: widget.loginItem.username);
+    _passwordController = TextEditingController(text: widget.loginItem.password);
+    _serviceNameController = TextEditingController(text: widget.loginItem.title);
   }
 
   @override
   void dispose() {
-    _emailController.dispose();
+    _usernameController.dispose();
     _passwordController.dispose();
     _serviceNameController.dispose();
     for (var field in _additionalFields) {
@@ -52,8 +46,14 @@ class _LoginDetailsBottomSheetState extends State<LoginDetailsBottomSheet> {
     super.dispose();
   }
 
-  void _save() {
-    // Add validation and saving logic here if needed
+  void _save() async {
+    // Save changes to Hive object
+    widget.loginItem
+      ..username = _usernameController.text
+      ..password = _passwordController.text
+      ..title = _serviceNameController.text;
+    await widget.loginItem.save();
+
     setState(() {
       _isEditing = false;
     });
@@ -102,7 +102,7 @@ class _LoginDetailsBottomSheetState extends State<LoginDetailsBottomSheet> {
                       ),
                     )
                         : Text(
-                      widget.serviceName,
+                      widget.loginItem.title,
                       style: TextStyle(
                           fontSize: 20, fontWeight: FontWeight.bold),
                     ),
@@ -110,7 +110,7 @@ class _LoginDetailsBottomSheetState extends State<LoginDetailsBottomSheet> {
                 ],
               ),
               const SizedBox(height: 30),
-              _buildEditableRow("Login", _emailController),
+              _buildEditableRow("Username", _usernameController),
               const SizedBox(height: 20),
               _buildEditablePasswordRow("Password", _passwordController),
               const SizedBox(height: 30),
@@ -131,38 +131,9 @@ class _LoginDetailsBottomSheetState extends State<LoginDetailsBottomSheet> {
                 );
               }),
 
-              if (widget.sharedWith.isNotEmpty && !_isEditing) ...[
-                Text("Shared To",
-                    style: TextStyle(fontWeight: FontWeight.bold)),
-                const SizedBox(height: 8),
-                Wrap(
-                  spacing: 8,
-                  children:
-                  widget.sharedWith.map((name) => Chip(label: Text(name))).toList(),
-                ),
-                const SizedBox(height: 30),
-              ],
-              if (widget.isPasswordWeak && !_isEditing)
-                Container(
-                  padding: EdgeInsets.all(12),
-                  decoration: BoxDecoration(
-                    color: Colors.orange[100],
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  child: Row(
-                    children: [
-                      Icon(Icons.warning, color: Colors.orange),
-                      const SizedBox(width: 10),
-                      Expanded(
-                        child: Text(
-                          "Vulnerability Alert\nThis password is weak",
-                          style: TextStyle(color: Colors.orange[900]),
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              const SizedBox(height: 30),
+              // Remove sharedWith section entirely
+
+              const SizedBox(height: 20),
               ElevatedButton.icon(
                 style: ElevatedButton.styleFrom(
                   minimumSize: Size(double.infinity, 48),
@@ -184,6 +155,49 @@ class _LoginDetailsBottomSheetState extends State<LoginDetailsBottomSheet> {
                     setState(() {
                       _isEditing = true;
                     });
+                  }
+                },
+              ),
+              const SizedBox(height: 10),
+              ElevatedButton.icon(
+                style: ElevatedButton.styleFrom(
+                  minimumSize: Size(double.infinity, 48),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  backgroundColor: Colors.red,
+                ),
+                icon: Icon(Icons.delete, color: Colors.white),
+                label: Text(
+                  "Delete Vault Item",
+                  style: TextStyle(color: Colors.white),
+                ),
+                onPressed: () async {
+                  final confirmed = await showDialog<bool>(
+                    context: context,
+                    builder: (context) => AlertDialog(
+                      title: Text('Confirm Delete'),
+                      content:
+                      Text('Are you sure you want to delete this vault item?'),
+                      actions: [
+                        TextButton(
+                          onPressed: () => Navigator.pop(context, false),
+                          child: Text('Cancel'),
+                        ),
+                        TextButton(
+                          onPressed: () => Navigator.pop(context, true),
+                          child: Text('Delete', style: TextStyle(color: Colors.red)),
+                        ),
+                      ],
+                    ),
+                  );
+
+                  if (confirmed == true) {
+                    await widget.loginItem.delete();
+                    Navigator.pop(context); // Close the bottom sheet after deletion
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(content: Text('Vault item deleted')),
+                    );
                   }
                 },
               ),
@@ -254,9 +268,7 @@ class _LoginDetailsBottomSheetState extends State<LoginDetailsBottomSheet> {
               children: [
                 IconButton(
                   icon: Icon(
-                    _isPasswordVisible
-                        ? Icons.visibility_off
-                        : Icons.visibility,
+                    _isPasswordVisible ? Icons.visibility_off : Icons.visibility,
                   ),
                   onPressed: () {
                     setState(() {
@@ -287,9 +299,7 @@ class _LoginDetailsBottomSheetState extends State<LoginDetailsBottomSheet> {
             ),
             IconButton(
               icon: Icon(
-                _isPasswordVisible
-                    ? Icons.visibility_off
-                    : Icons.visibility,
+                _isPasswordVisible ? Icons.visibility_off : Icons.visibility,
                 size: 20,
               ),
               onPressed: () {

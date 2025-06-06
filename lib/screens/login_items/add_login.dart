@@ -1,5 +1,9 @@
+import 'dart:math';
+
 import 'package:flutter/material.dart';
 import '../../widgets/custom_input_field.dart';
+import '../../models/login_item.dart';
+import 'package:hive/hive.dart';
 
 class AddLoginPopup extends StatefulWidget {
   const AddLoginPopup({super.key});
@@ -14,6 +18,32 @@ class _AddLoginPopupState extends State<AddLoginPopup> {
   final TextEditingController passwordController = TextEditingController();
   final TextEditingController websiteController = TextEditingController();
   bool _obscurePassword = true;
+
+  void _generatePassword() {
+    const String uppercase = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
+    const String lowercase = 'abcdefghijklmnopqrstuvwxyz';
+    const String digits = '0123456789';
+    const String special = '!@#%^&*\$#()-_=+[{]}\\|;:,<.>/?~';
+
+    final chars = uppercase + lowercase + digits + special;
+    final rand = Random();
+
+    final password = List.generate(18, (_) => chars[rand.nextInt(chars.length)]).join();
+
+    setState(() {
+      passwordController.text = password;
+      _obscurePassword = true;  // optionally obscure when generated
+    });
+  }
+
+  @override
+  void dispose() {
+    nameController.dispose();
+    usernameController.dispose();
+    passwordController.dispose();
+    websiteController.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -100,9 +130,7 @@ class _AddLoginPopupState extends State<AddLoginPopup> {
                           ),
                           padding: const EdgeInsets.symmetric(vertical: 16),
                         ),
-                        onPressed: () {
-                          // Placeholder for action
-                        },
+                          onPressed: _generatePassword,
                         child: const Text(
                           "Generate Password",
                           style: TextStyle(fontSize: 16, color: Color(0xFF328E6E)), // Text color same as border
@@ -121,8 +149,30 @@ class _AddLoginPopupState extends State<AddLoginPopup> {
                           ),
                           padding: const EdgeInsets.symmetric(vertical: 16),
                         ),
-                        onPressed: () {
-                          // Save logic here
+                        onPressed: () async {
+                          if (nameController.text.isEmpty ||
+                              usernameController.text.isEmpty ||
+                              passwordController.text.isEmpty) {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(
+                                content: Text('Please fill in all required fields.'),
+                                backgroundColor: Colors.red,
+                                duration: Duration(seconds: 2),
+                              ),
+                            );
+                            return;
+                          }
+
+                          final loginBox = Hive.box<LoginItem>('loginBox');
+                          final newItem = LoginItem(
+                            title: nameController.text,
+                            username: usernameController.text,
+                            password: passwordController.text,
+                          );
+
+                          await loginBox.add(newItem);
+
+                          Navigator.of(context).pop(); // no need to return the new item
                         },
                         child: const Text(
                           "Save",
