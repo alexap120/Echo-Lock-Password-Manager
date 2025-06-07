@@ -1,28 +1,35 @@
+import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:password_manager/screens/auth/login_password.dart';
+import 'keyEncryption.dart';  // Your encryption key helper
 import 'screens/auth/login.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:hive_flutter/hive_flutter.dart';
-import 'package:path_provider/path_provider.dart'; // For Android/iOS document directory
-import 'models/login_item.dart'; // Adjust path as per your project structure
+import 'models/login_item.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
-  // Initialize Firebase
   await Firebase.initializeApp();
-  // Initialize Hive
   await Hive.initFlutter();
-  // Register your adapters
   Hive.registerAdapter(LoginItemAdapter());
-  // Open boxes
-  await Hive.openBox<LoginItem>('loginBox');
-  // SharedPreferences for your remember me logic
+
+  // Get or create encryption key from secure storage
+  final encryptionKey = await EncryptionKeyManager.getEncryptionKey();
+
+  // Open encrypted Hive box
+  await Hive.openBox<LoginItem>(
+    'loginBox',
+    encryptionCipher: HiveAesCipher(encryptionKey),
+  );
+
   final prefs = await SharedPreferences.getInstance();
   final rememberMe = prefs.getBool('remember_me') ?? false;
 
-  runApp(MyApp(initialScreen: rememberMe ? const EnterPasswordScreen() : const LoginScreen()));
+  runApp(MyApp(
+    initialScreen: rememberMe ? const EnterPasswordScreen() : const LoginScreen(),
+  ));
 }
 
 class MyApp extends StatelessWidget {
@@ -33,9 +40,10 @@ class MyApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: 'Flutter Demo',
+      title: 'Password Manager',
       theme: ThemeData(
         colorScheme: ColorScheme.fromSeed(seedColor: Colors.deepPurple),
+        useMaterial3: true,
       ),
       home: initialScreen,
     );
