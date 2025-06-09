@@ -1,6 +1,11 @@
 import 'dart:math';
+import 'dart:typed_data';
 
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
+import '../../encryptItems.dart';
+import '../../keyManager.dart';
 import '../../widgets/custom_input_field.dart';
 import '../../models/login_item.dart';
 import 'package:hive/hive.dart';
@@ -13,6 +18,8 @@ class AddLoginPopup extends StatefulWidget {
 }
 
 class _AddLoginPopupState extends State<AddLoginPopup> {
+
+  final userId = FirebaseAuth.instance.currentUser?.uid;
   final TextEditingController nameController = TextEditingController();
   final TextEditingController usernameController = TextEditingController();
   final TextEditingController passwordController = TextEditingController();
@@ -163,16 +170,64 @@ class _AddLoginPopupState extends State<AddLoginPopup> {
                             return;
                           }
 
+                          final userId = FirebaseAuth.instance.currentUser?.uid;
+                          if (userId == null) {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(content: Text('User not logged in!')),
+                            );
+                            return;
+                          }
+
                           final loginBox = Hive.box<LoginItem>('loginBox');
+
+                          // --- Here you need the derived key from PBKDF2 ---
+                          // Replace this with your actual key retrieval logic
+                          Uint8List? derivedKey = await PBKDF2KeyManager.loadKeyFromLocal();
+
+                          if (derivedKey == null) {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(content: Text('Encryption key not found!')),
+                            );
+                            return; // stop execution if key is missing
+                          }
+                          // Encrypt the password before saving to Firestore
+                          final encryptedPasswordMap = await encryptAesGcm(derivedKey, passwordController.text);
+
+                          // Create LoginItem with plaintext for Hive local storage
                           final newItem = LoginItem(
                             title: nameController.text,
                             username: usernameController.text,
                             password: passwordController.text,
                           );
 
-                          await loginBox.add(newItem);
+                          // 1. Save locally in Hive as plaintext (you can encrypt locally if you want too)
+                          final index = await loginBox.add(newItem);
 
-                          Navigator.of(context).pop(); // no need to return the new item
+                          try {
+                            // 2. Upload encrypted password to Firestore
+                            final docRef = await FirebaseFirestore.instance
+                                .collection('users')
+                                .doc(userId)
+                                .collection('logins')
+                                .add({
+                              'title': newItem.title,
+                              'username': newItem.username,
+                              // Save the whole encrypted map as a sub-map
+                              'password': encryptedPasswordMap['ciphertext'],
+                              'nonce': encryptedPasswordMap['nonce'],
+                              'tag': encryptedPasswordMap['tag'],
+                            });
+
+                            // 3. Save Firestore doc ID in Hive item (for future update/delete)
+                            newItem.firestoreId = docRef.id;
+                            await newItem.save();
+                          } catch (e) {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              SnackBar(content: Text('Failed to save to Firestore: $e')),
+                            );
+                          }
+
+                          Navigator.of(context).pop();
                         },
                         child: const Text(
                           "Save",

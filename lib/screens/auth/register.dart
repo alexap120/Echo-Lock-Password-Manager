@@ -1,5 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:hive/hive.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import '../../keyManager.dart';
+import '../../models/login_item.dart';
 import 'auth_service.dart';
 import 'login.dart';
 import '/widgets/custom_input_field.dart';
@@ -208,6 +211,16 @@ class _RegisterScreenState extends State<RegisterScreen> {
                         username: username,
                       );
 
+                      final userId = email; // Or use Firebase UID if available
+                      final salt = PBKDF2KeyManager.generateSalt();
+                      await PBKDF2KeyManager.storeSaltInFirestore(userId, salt);
+                      final key = await PBKDF2KeyManager.deriveKey(password, salt);
+                      await PBKDF2KeyManager.storeKeyAndSaltLocally(key, salt);
+
+                      await Hive.openBox<LoginItem>(
+                           'loginBox',
+                           encryptionCipher: HiveAesCipher(key),
+                         );
                       ScaffoldMessenger.of(context).showSnackBar(
                         const SnackBar(content: Text(
                             "Account created. Verify your email.")),

@@ -1,12 +1,12 @@
 import 'dart:convert';
 import 'package:flutter/material.dart';
-import 'package:password_manager/screens/auth/login_password.dart';
-import 'keyEncryption.dart';  // Your encryption key helper
-import 'screens/auth/login.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:hive_flutter/hive_flutter.dart';
 import 'models/login_item.dart';
+import 'screens/auth/login.dart';
+import 'screens/auth/login_password.dart';
+import 'keyManager.dart'; // assumes PBKDF2KeyManager is in this file
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -15,20 +15,26 @@ void main() async {
   await Hive.initFlutter();
   Hive.registerAdapter(LoginItemAdapter());
 
-  // Get or create encryption key from secure storage
-  final encryptionKey = await EncryptionKeyManager.getEncryptionKey();
+  final key = await PBKDF2KeyManager.loadKeyFromLocal();
 
-  // Open encrypted Hive box
-  await Hive.openBox<LoginItem>(
-    'loginBox',
-    encryptionCipher: HiveAesCipher(encryptionKey),
-  );
+  Box<LoginItem>? loginBox;
+
+  if (key != null) {
+    loginBox = await Hive.openBox<LoginItem>(
+      'loginBox',
+      encryptionCipher: HiveAesCipher(key),
+    );
+  } else {
+    debugPrint("No local key found. Skipping Hive box decryption.");
+  }
 
   final prefs = await SharedPreferences.getInstance();
   final rememberMe = prefs.getBool('remember_me') ?? false;
 
   runApp(MyApp(
-    initialScreen: rememberMe ? const EnterPasswordScreen() : const LoginScreen(),
+    initialScreen: key != null && rememberMe
+        ? EnterPasswordScreen()
+        : LoginScreen(),
   ));
 }
 

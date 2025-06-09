@@ -1,10 +1,14 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
+import 'package:hive/hive.dart';
 import 'package:local_auth/local_auth.dart';
 import 'package:flutter/services.dart';
 import 'package:password_manager/screens/main_screens/home.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+import '../../keyManager.dart';
+import '../../models/login_item.dart';
+import '../../services/sync_items_service.dart';
 import '../../widgets/custom_input_field.dart';
 import '../addPhone.dart';
 import 'auth_service.dart';
@@ -35,6 +39,34 @@ class _EnterPasswordScreenState extends State<EnterPasswordScreen> {
       _lastName = prefs.getString('lastName') ?? '';
       _savedEmail = prefs.getString('remembered_email') ?? '';
     });
+  }
+
+  Future<void> _syncItems() async {
+    try {
+      // Load key from local storage
+      final key = await PBKDF2KeyManager.loadKeyFromLocal();
+      if (key == null) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text("Encryption key not found.")),
+        );
+        return;
+      }
+
+      // Open Hive box
+      final loginBox = await Hive.openBox<LoginItem>(
+        'loginBox',
+        encryptionCipher: HiveAesCipher(key),
+      );
+
+      // Sync Firestore to Hive
+      final firestore = FirebaseFirestore.instance;
+      final syncService = SyncService(firestore: firestore, hiveBox: loginBox);
+      await syncService.syncLoginItems(_savedEmail);
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text("Failed to sync items: $e")),
+      );
+    }
   }
 
 
@@ -85,6 +117,7 @@ class _EnterPasswordScreenState extends State<EnterPasswordScreen> {
       }
 
       if (isAuthenticated) {
+        await _syncItems();
         // Check phone number in Firestore after biometric auth
         final prefs = await SharedPreferences.getInstance();
         final savedEmail = prefs.getString('remembered_email') ?? '';
@@ -245,6 +278,7 @@ class _EnterPasswordScreenState extends State<EnterPasswordScreen> {
                       );
                     } else {
                       // Success: check phone number, then navigate
+                      await _syncItems();
                       try {
                         final querySnapshot = await FirebaseFirestore.instance
                             .collection('users')

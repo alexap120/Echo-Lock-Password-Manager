@@ -1,12 +1,18 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
+import 'package:hive/hive.dart';
 import 'package:password_manager/screens/auth/resetPassword/enter_email.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import '../../keyManager.dart';
+import '../../models/login_item.dart';
+import '../../services/sync_items_service.dart';
 import '../../widgets/custom_input_field.dart';
 import '../addPhone.dart';
 import '../main_screens/home.dart';
 import 'auth_service.dart';
 import 'register.dart';
 import 'package:intl/intl.dart';
+import 'dart:typed_data';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -137,79 +143,109 @@ class _LoginScreenState extends State<LoginScreen> {
                   const SizedBox(width: 12),
                   Expanded(
                     child: ElevatedButton(
-                        onPressed: () async {
-                          final email = emailController.text.trim();
-                          final password = passwordController.text;
+                      onPressed: () async {
+                        final email = emailController.text.trim();
+                        final password = passwordController.text;
 
-                          if ([email, password].any((e) => e.isEmpty)) {
+                        if ([email, password].any((e) => e.isEmpty)) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(content: Text("Please fill in all fields.")),
+                          );
+                          return;
+                        }
+
+                        final result = await AuthService().signInWithEmail(
+                          email: email,
+                          password: password,
+                        );
+
+                        if (result is String) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(content: Text(result)),
+                          );
+                        } else if (result is Map<String, dynamic>) {
+                          final prefs = await SharedPreferences.getInstance();
+                          if (rememberMe) {
+                            await prefs.setBool('remember_me', true);
+                            await prefs.setString('remembered_email', email);
+                          }
+
+                          Uint8List? key = await PBKDF2KeyManager.loadKeyFromLocal();
+                          if (key == null) {
+                            try {
+                              final salt = await PBKDF2KeyManager.fetchSaltFromFirestore(email);
+                              key = await PBKDF2KeyManager.deriveKey(password, salt);
+                              await PBKDF2KeyManager.storeKeyAndSaltLocally(key, salt);
+                            } catch (e) {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                SnackBar(content: Text("Failed to fetch salt or derive key: $e")),
+                              );
+                              return;
+                            }
+                          }
+
+                          late Box<LoginItem> loginBox;
+                          try {
+                            loginBox = await Hive.openBox<LoginItem>(
+                              'loginBox',
+                              encryptionCipher: HiveAesCipher(key),
+                            );
+                          } catch (e) {
                             ScaffoldMessenger.of(context).showSnackBar(
-                              const SnackBar(content: Text("Please fill in all fields.")),
+                              SnackBar(content: Text("Failed to open vault: $e")),
                             );
                             return;
                           }
 
-                          final result = await AuthService().signInWithEmail(
-                            email: email,
-                            password: password,
-                          );
-
-                          if (result is String) {
-                            // An error message returned
+                          // SYNC Firestore with local Hive box here:
+                          try {
+                            final firestore = FirebaseFirestore.instance;
+                            final syncService = SyncService(firestore: firestore, hiveBox: loginBox);
+                            await syncService.syncLoginItems(email);  // use email or userId if available
+                          } catch (e) {
+                            // You can decide if you want to block login or just warn user
+                            debugPrint("Sync error: $e");
                             ScaffoldMessenger.of(context).showSnackBar(
-                              SnackBar(content: Text(result)),
-                            );
-                          } else if (result is Map<String, dynamic>) {
-                            // Success: Save user profile to SharedPreferences
-                            final prefs = await SharedPreferences.getInstance();
-                            if (rememberMe) {
-                              await prefs.setBool('remember_me', true);
-                              await prefs.setString('remembered_email', email); // optional
-                            }
-
-                            final DateTime? createdAt = result['createdAt']?.toDate();
-                            final String formattedDate = createdAt != null
-                                ? DateFormat('dd-MM-yyyy').format(createdAt)
-                                : '';
-
-                            await prefs.setString('firstName', result['firstName'] ?? '');
-                            await prefs.setString('lastName', result['lastName'] ?? '');
-                            await prefs.setString('username', result['username'] ?? '');
-                            await prefs.setString('email', result['email'] ?? '');
-                            await prefs.setString('phoneNumber', result['phoneNumber'] ?? '');
-                            await prefs.setString('memberSince', formattedDate);
-
-                            if (!prefs.containsKey('biometric_enabled')) {
-                              await prefs.setBool('biometric_enabled', false);
-                            }
-
-                            // CHECK PHONE VERIFICATION
-                            final phoneNumber = result['phoneNumber'];
-                            final phoneVerified = result['phoneVerified'] == true;
-
-                            print('User data on login: $result');
-                            print('Phone number: ${result['phoneNumber']}');
-                            print('Phone verified: ${result['phoneVerified']}');
-
-
-                            if (phoneNumber == null || !phoneVerified) {
-                              // User needs to add/verify phone number
-                              Navigator.pushReplacement(
-                                context,
-                                MaterialPageRoute(builder: (context) => AddPhoneScreen()),
-                              );
-                            } else {
-                              Navigator.pushReplacement(
-                                context,
-                                MaterialPageRoute(builder: (context) => const HomeScreen()),
-                              );
-                            }
-                          } else {
-                            // Unexpected case
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              const SnackBar(content: Text("Unexpected login error.")),
+                              SnackBar(content: Text("Warning: Failed to sync data: $e")),
                             );
                           }
-                        },
+
+                          final DateTime? createdAt = result['createdAt']?.toDate();
+                          final String formattedDate = createdAt != null
+                              ? DateFormat('dd-MM-yyyy').format(createdAt)
+                              : '';
+
+                          await prefs.setString('firstName', result['firstName'] ?? '');
+                          await prefs.setString('lastName', result['lastName'] ?? '');
+                          await prefs.setString('username', result['username'] ?? '');
+                          await prefs.setString('email', result['email'] ?? '');
+                          await prefs.setString('phoneNumber', result['phoneNumber'] ?? '');
+                          await prefs.setString('memberSince', formattedDate);
+
+                          if (!prefs.containsKey('biometric_enabled')) {
+                            await prefs.setBool('biometric_enabled', false);
+                          }
+
+                          final phoneNumber = result['phoneNumber'];
+                          final phoneVerified = result['phoneVerified'] == true;
+
+                          if (phoneNumber == null || !phoneVerified) {
+                            Navigator.pushReplacement(
+                              context,
+                              MaterialPageRoute(builder: (context) => AddPhoneScreen()),
+                            );
+                          } else {
+                            Navigator.pushReplacement(
+                              context,
+                              MaterialPageRoute(builder: (context) => const HomeScreen()),
+                            );
+                          }
+                        } else {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(content: Text("Unexpected login error.")),
+                          );
+                        }
+                      },
                         style: ElevatedButton.styleFrom(
                         backgroundColor: const Color(0xFF328E6E),
                         foregroundColor: Colors.white,

@@ -13,11 +13,32 @@ class LoginItem extends HiveObject {
   @HiveField(2)
   String password;
 
+  @HiveField(3)
+  String? firestoreId;
+
   LoginItem({
     required this.title,
     required this.username,
     required this.password,
+    this.firestoreId,
   });
 
   String get type => 'Login';
+
+  Map<String, dynamic> toJson() {
+    return {
+      'title': title,
+      'username': username,
+      'password': password,
+    };
+  }
+
+  factory LoginItem.fromJson(Map<String, dynamic> json) {
+    return LoginItem(
+      title: json['title'] ?? '',
+      username: json['username'] ?? '',
+      password: json['password'] ?? '',
+    );
+  }
 }
+
