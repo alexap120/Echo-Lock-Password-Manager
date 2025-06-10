@@ -1,6 +1,10 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
+import '../../encryptItems.dart';
+import '../../keyManager.dart';
 import '../../models/login_item.dart';
 
 class LoginDetailsBottomSheet extends StatefulWidget {
@@ -53,6 +57,29 @@ class _LoginDetailsBottomSheetState extends State<LoginDetailsBottomSheet> {
       ..password = _passwordController.text
       ..title = _serviceNameController.text;
     await widget.loginItem.save();
+
+    // Update Firestore if firestoreId exists
+    final firestoreId = widget.loginItem.firestoreId;
+    final userId = FirebaseAuth.instance.currentUser?.uid;
+    if (firestoreId != null && userId != null) {
+      // Load encryption key
+      final key = await PBKDF2KeyManager.loadKeyFromLocal();
+      if (key != null) {
+        final encryptedPassword = await encryptAesGcm(key, widget.loginItem.password);
+        await FirebaseFirestore.instance
+            .collection('users')
+            .doc(userId)
+            .collection('logins')
+            .doc(firestoreId)
+            .update({
+          'title': widget.loginItem.title,
+          'username': widget.loginItem.username,
+          'password': encryptedPassword['ciphertext'],
+          'nonce': encryptedPassword['nonce'],
+          'tag': encryptedPassword['tag'],
+        });
+      }
+    }
 
     setState(() {
       _isEditing = false;
@@ -193,11 +220,25 @@ class _LoginDetailsBottomSheetState extends State<LoginDetailsBottomSheet> {
                   );
 
                   if (confirmed == true) {
-                    await widget.loginItem.delete();
-                    Navigator.pop(context); // Close the bottom sheet after deletion
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(content: Text('Vault item deleted')),
-                    );
+                    // Delete from Firestore if firestoreId exists
+                    final firestoreId = widget.loginItem.firestoreId;
+
+
+                    if (firestoreId != null) {
+                      final userId = FirebaseAuth.instance.currentUser?.uid;
+                      await FirebaseFirestore.instance
+                          .collection('users')
+                          .doc(userId)
+                          .collection('logins')
+                          .doc(firestoreId)
+                          .delete();
+
+                      await widget.loginItem.delete();
+                      Navigator.pop(context);
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(content: Text('Vault item deleted')),
+                      );
+                    }
                   }
                 },
               ),

@@ -1,7 +1,7 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:hive/hive.dart';
-
+import 'package:collection/collection.dart';
 import '../encryptItems.dart';
 import '../keyManager.dart';
 import 'dart:typed_data';
@@ -16,34 +16,48 @@ class SyncService {
 
   Future<void> syncLoginItems(String userId) async {
     try {
-      final loginsCollection = firestore.collection('users').doc(FirebaseAuth.instance.currentUser?.uid).collection('logins');
+      final loginsCollection = firestore
+          .collection('users')
+          .doc(FirebaseAuth.instance.currentUser?.uid)
+          .collection('logins');
       final querySnapshot = await loginsCollection.get();
 
-      // Load the derived key once
       Uint8List? key = await PBKDF2KeyManager.loadKeyFromLocal();
       if (key == null) throw Exception('Encryption key not found');
 
       for (var doc in querySnapshot.docs) {
         final data = doc.data();
 
-        // Build the encrypted map for decryption
         final encryptedPassword = {
           'ciphertext': data['password'] as String,
           'nonce': data['nonce'] as String,
           'tag': data['tag'] as String,
         };
 
-        // Decrypt the password
         final decryptedPassword = await decryptAesGcm(key, encryptedPassword);
 
-        final loginItem = LoginItem(
-          title: data['title'] ?? '',
-          username: data['username'] ?? '',
-          password: decryptedPassword,
+        // Check if item with this firestoreId exists
+        final existing = hiveBox.values.firstWhereOrNull(
+              (item) => item.firestoreId == doc.id,
         );
 
-        // Save or update Hive box keyed by doc.id
-        await hiveBox.put(doc.id, loginItem);
+        if (existing != null) {
+          // Update existing item
+          existing
+            ..title = data['title'] ?? ''
+            ..username = data['username'] ?? ''
+            ..password = decryptedPassword;
+          await existing.save();
+        } else {
+          // Add new item and set firestoreId
+          final loginItem = LoginItem(
+            title: data['title'] ?? '',
+            username: data['username'] ?? '',
+            password: decryptedPassword,
+            firestoreId: doc.id,
+          );
+          await hiveBox.add(loginItem);
+        }
       }
     } catch (e) {
       print('Error syncing login items: $e');
