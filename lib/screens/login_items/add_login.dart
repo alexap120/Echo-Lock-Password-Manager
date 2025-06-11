@@ -180,8 +180,6 @@ class _AddLoginPopupState extends State<AddLoginPopup> {
 
                           final loginBox = Hive.box<LoginItem>('loginBox');
 
-                          // --- Here you need the derived key from PBKDF2 ---
-                          // Replace this with your actual key retrieval logic
                           Uint8List? derivedKey = await PBKDF2KeyManager.loadKeyFromLocal();
 
                           if (derivedKey == null) {

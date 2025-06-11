@@ -7,10 +7,12 @@ import 'package:password_manager/screens/login_items/add_card.dart';
 import 'package:password_manager/screens/login_items/add_note.dart';
 import 'package:password_manager/screens/profile/profile_page.dart';
 
-import '../../models/login_item.dart'; // Your Hive model
+import '../../models/login_item.dart';
+import '../../models/notes_item.dart';
 import '../../widgets/custom_bottom_nav_bar.dart';
 import '../login_items/add_login.dart';
 import '../login_items/login_item_details.dart';
+import '../login_items/note_item_details.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -26,13 +28,10 @@ class _HomeScreenState extends State<HomeScreen> {
   String _selectedChip = 'All';
   File? _profileImage;
 
-  void _onTabTapped(int index) {
-    setState(() => _selectedIndex = index);
-  }
-
   @override
   Widget build(BuildContext context) {
     final loginBox = Hive.box<LoginItem>('loginBox');
+    final notesBox = Hive.box<NoteItem>('notesBox');
 
     return Scaffold(
       extendBody: true,
@@ -141,90 +140,150 @@ class _HomeScreenState extends State<HomeScreen> {
                 ),
               ),
               Expanded(
-                child: ValueListenableBuilder<Box<LoginItem>>(
+                child: ValueListenableBuilder(
                   valueListenable: loginBox.listenable(),
-                  builder: (context, box, _) {
-                    final allItems = box.values.toList();
+                  builder: (context, Box<LoginItem> loginBox, _) {
+                    return ValueListenableBuilder(
+                      valueListenable: notesBox.listenable(),
+                      builder: (context, Box<NoteItem> notesBox, _) {
+                        // Gather all items
+                        final allLoginItems = loginBox.values.toList();
+                        final allNoteItems = notesBox.values.toList();
 
-                    final filteredItems = allItems.where((item) {
-                      final matchesSearch = item.title
-                          .toLowerCase()
-                          .contains(_searchQuery.toLowerCase()) ||
-                          item.username
-                              .toLowerCase()
-                              .contains(_searchQuery.toLowerCase());
+                        List<dynamic> filteredItems = [];
 
-                      final matchesChip = _selectedChip == 'All' ||
-                          item.type.toLowerCase() == _selectedChip.toLowerCase();
-
-                      return matchesSearch && matchesChip;
-                    }).toList();
-
-                    if (filteredItems.isEmpty) {
-                      return Center(
-                        child: Column(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            Padding(
-                              padding: const EdgeInsets.only(left: 20),
-                              child: Image.asset(
-                                'assets/no_items.png',
-                                width: 150,
-                                height: 150,
-                                color: const Color(0xFF328E6E),
-                              ),
+                        if (_selectedChip == 'All') {
+                          filteredItems = [
+                            ...allLoginItems.where((item) =>
+                            item.title.toLowerCase().contains(_searchQuery.toLowerCase()) ||
+                                item.username.toLowerCase().contains(_searchQuery.toLowerCase())
                             ),
-                            const SizedBox(height: 16),
-                            Text(
-                              'There are currently no items\nStart adding some!',
-                              textAlign: TextAlign.center,
-                              style: TextStyle(
-                                fontSize: 18,
-                                color: Colors.grey[600],
-                              ),
+                            ...allNoteItems.where((item) =>
+                            item.title.toLowerCase().contains(_searchQuery.toLowerCase()) ||
+                                item.content.toLowerCase().contains(_searchQuery.toLowerCase())
                             ),
-                          ],
-                        ),
-                      );
-                    }
+                          ];
+                        } else if (_selectedChip == 'Login') {
+                          filteredItems = allLoginItems.where((item) =>
+                          item.title.toLowerCase().contains(_searchQuery.toLowerCase()) ||
+                              item.username.toLowerCase().contains(_searchQuery.toLowerCase())
+                          ).toList();
+                        } else if (_selectedChip == 'Secure Note') {
+                          filteredItems = allNoteItems.where((item) =>
+                          item.title.toLowerCase().contains(_searchQuery.toLowerCase()) ||
+                              item.content.toLowerCase().contains(_searchQuery.toLowerCase())
+                          ).toList();
+                        } else if (_selectedChip == 'Card') {
+                          filteredItems = allLoginItems.where((item) =>
+                          (item.type.toLowerCase() == 'card') &&
+                              (item.title.toLowerCase().contains(_searchQuery.toLowerCase()) ||
+                                  item.username.toLowerCase().contains(_searchQuery.toLowerCase()))
+                          ).toList();
+                        }
 
-                    return ListView.builder(
-                      padding:
-                      const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                      itemCount: filteredItems.length,
-                      itemBuilder: (context, index) {
-                        final item = filteredItems[index];
-                        return Card(
-                          color: Colors.white,
-                          shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(14)),
-                          elevation: 1,
-                          margin: const EdgeInsets.symmetric(vertical: 6),
-                          child: ListTile(
-                            onTap: () {
-                              showModalBottomSheet(
-                                context: context,
-                                isScrollControlled: true,
-                                backgroundColor: Colors.transparent,
-                                builder: (_) => LoginDetailsBottomSheet(
-                                  loginItem: item,
+                        if (filteredItems.isEmpty) {
+                          return Center(
+                            child: Column(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Padding(
+                                  padding: const EdgeInsets.only(left: 20),
+                                  child: Image.asset(
+                                    'assets/no_items.png',
+                                    width: 150,
+                                    height: 150,
+                                    color: const Color(0xFF328E6E),
+                                  ),
+                                ),
+                                const SizedBox(height: 16),
+                                Text(
+                                  'There are currently no items\nStart adding some!',
+                                  textAlign: TextAlign.center,
+                                  style: TextStyle(
+                                    fontSize: 18,
+                                    color: Colors.grey[600],
+                                  ),
+                                ),
+                              ],
+                            ),
+                          );
+                        }
+
+                        return ListView.builder(
+                          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                          itemCount: filteredItems.length,
+                          itemBuilder: (context, index) {
+                            final item = filteredItems[index];
+                            if (item is LoginItem) {
+                              return Card(
+                                color: Colors.white,
+                                shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(14)),
+                                elevation: 1,
+                                margin: const EdgeInsets.symmetric(vertical: 6),
+                                child: ListTile(
+                                  onTap: () {
+                                    showModalBottomSheet(
+                                      context: context,
+                                      isScrollControlled: true,
+                                      backgroundColor: Colors.transparent,
+                                      builder: (_) => LoginDetailsBottomSheet(
+                                        loginItem: item,
+                                      ),
+                                    );
+                                  },
+                                  contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                                  title: Text(
+                                    item.title,
+                                    style: const TextStyle(
+                                      fontWeight: FontWeight.bold,
+                                      color: Color(0xFF90C67C),
+                                    ),
+                                  ),
+                                  subtitle: Text(
+                                    item.username,
+                                    style: const TextStyle(color: Colors.grey),
+                                  ),
+                                  trailing: const Icon(Icons.password_outlined, size: 28),
                                 ),
                               );
-                            },
-                            contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                            title: Text(
-                              item.title,
-                              style: const TextStyle(
-                                fontWeight: FontWeight.bold,
-                                color: Color(0xFF90C67C),
-                              ),
-                            ),
-                            subtitle: Text(
-                              item.username,
-                              style: const TextStyle(color: Colors.grey),
-                            ),
-                            trailing: const Icon(Icons.more_horiz, size: 28),
-                          ),
+                            } else if (item is NoteItem) {
+                              return Card(
+                                color: Colors.white,
+                                shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(14)),
+                                elevation: 1,
+                                margin: const EdgeInsets.symmetric(vertical: 6),
+                                child: ListTile(
+                                  onTap: () {
+                                    showModalBottomSheet(
+                                      context: context,
+                                      isScrollControlled: true,
+                                      backgroundColor: Colors.transparent,
+                                      builder: (_) => NoteDetailsBottomSheet(noteItem: item),
+                                    );
+                                  },
+                                  contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                                  title: Text(
+                                    item.title,
+                                    style: const TextStyle(
+                                      fontWeight: FontWeight.bold,
+                                      color: Color(0xFF90C67C),
+                                    ),
+                                  ),
+                                  subtitle: Text(
+                                    item.content.length > 40
+                                        ? item.content.substring(0, 40) + '...'
+                                        : item.content,
+                                    style: const TextStyle(color: Colors.grey),
+                                  ),
+                                  trailing: const Icon(Icons.sticky_note_2_outlined, size: 28),
+                                ),
+                              );
+                            } else {
+                              return const SizedBox.shrink();
+                            }
+                          },
                         );
                       },
                     );
@@ -237,7 +296,9 @@ class _HomeScreenState extends State<HomeScreen> {
       ),
       bottomNavigationBar: CustomBottomNavBar(
         selectedIndex: _selectedIndex,
-        onItemTapped: _onTabTapped,
+        onItemTapped: (index) {
+          setState(() => _selectedIndex = index);
+        },
       ),
       floatingActionButton: SpeedDial(
         animatedIcon: AnimatedIcons.menu_close,
@@ -263,11 +324,12 @@ class _HomeScreenState extends State<HomeScreen> {
             backgroundColor: const Color(0xFF67AE6E),
             foregroundColor: Colors.white,
             label: 'Add Note',
-            onTap: () {
-              Navigator.push(
+            onTap: () async {
+              await Navigator.push(
                 context,
                 MaterialPageRoute(builder: (context) => AddNotePopup()),
               );
+              setState(() {});
             },
           ),
           SpeedDialChild(

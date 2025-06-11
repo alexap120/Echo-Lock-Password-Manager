@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
+import 'package:password_manager/models/notes_item.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:hive_flutter/hive_flutter.dart';
 import 'models/login_item.dart';
@@ -14,14 +15,21 @@ void main() async {
   await Firebase.initializeApp();
   await Hive.initFlutter();
   Hive.registerAdapter(LoginItemAdapter());
+  Hive.registerAdapter(NoteItemAdapter());
 
   final key = await PBKDF2KeyManager.loadKeyFromLocal();
 
   Box<LoginItem>? loginBox;
+  Box<NoteItem>? notesBox;
 
   if (key != null) {
     loginBox = await Hive.openBox<LoginItem>(
       'loginBox',
+      encryptionCipher: HiveAesCipher(key),
+    );
+
+    notesBox = await Hive.openBox<NoteItem>(
+      'notesBox',
       encryptionCipher: HiveAesCipher(key),
     );
   } else {

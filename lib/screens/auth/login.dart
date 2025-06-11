@@ -5,6 +5,7 @@ import 'package:password_manager/screens/auth/resetPassword/enter_email.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../../keyManager.dart';
 import '../../models/login_item.dart';
+import '../../models/notes_item.dart';
 import '../../services/sync_items_service.dart';
 import '../../widgets/custom_input_field.dart';
 import '../addPhone.dart';
@@ -185,9 +186,14 @@ class _LoginScreenState extends State<LoginScreen> {
                           }
 
                           late Box<LoginItem> loginBox;
+                          late Box<NoteItem> notesBox;
                           try {
                             loginBox = await Hive.openBox<LoginItem>(
                               'loginBox',
+                              encryptionCipher: HiveAesCipher(key),
+                            );
+                            notesBox = await Hive.openBox<NoteItem>(
+                              'notesBox',
                               encryptionCipher: HiveAesCipher(key),
                             );
                           } catch (e) {
@@ -201,15 +207,16 @@ class _LoginScreenState extends State<LoginScreen> {
                           try {
                             final firestore = FirebaseFirestore.instance;
                             final syncService = SyncService(firestore: firestore, hiveBox: loginBox);
-                            await syncService.syncLoginItems(email);  // use email or userId if available
+                            await syncService.syncLoginItems(email);
+                            await syncService.syncNoteItems(notesBox, email);
                           } catch (e) {
-                            // You can decide if you want to block login or just warn user
                             debugPrint("Sync error: $e");
                             ScaffoldMessenger.of(context).showSnackBar(
                               SnackBar(content: Text("Warning: Failed to sync data: $e")),
                             );
                           }
 
+                          // ... rest of your code for storing prefs and navigation ...
                           final DateTime? createdAt = result['createdAt']?.toDate();
                           final String formattedDate = createdAt != null
                               ? DateFormat('dd-MM-yyyy').format(createdAt)
