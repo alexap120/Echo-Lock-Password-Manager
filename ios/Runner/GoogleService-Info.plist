@@ -9,7 +9,7 @@
 	<key>PLIST_VERSION</key>
 	<string>1</string>
 	<key>BUNDLE_ID</key>
-	<string>com.alexandre.passwordManager</string>
+	<string>com.example.passwordManager</string>
 	<key>PROJECT_ID</key>
 	<string>password-manager-881a6</string>
 	<key>STORAGE_BUCKET</key>
@@ -25,6 +25,6 @@
 	<key>IS_SIGNIN_ENABLED</key>
 	<true></true>
 	<key>GOOGLE_APP_ID</key>
-	<string>1:392306492035:ios:c06f76743a928cd62911b6</string>
+	<string>1:392306492035:ios:c755561ff3edb6192911b6</string>
 </dict>
 </plist>
