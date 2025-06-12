@@ -3,6 +3,7 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter_speed_dial/flutter_speed_dial.dart';
 import 'package:hive_flutter/hive_flutter.dart';
+import 'package:password_manager/models/card_item.dart';
 import 'package:password_manager/screens/login_items/add_card.dart';
 import 'package:password_manager/screens/login_items/add_note.dart';
 import 'package:password_manager/screens/profile/profile_page.dart';
@@ -11,6 +12,7 @@ import '../../models/login_item.dart';
 import '../../models/notes_item.dart';
 import '../../widgets/custom_bottom_nav_bar.dart';
 import '../login_items/add_login.dart';
+import '../login_items/card_item_details.dart';
 import '../login_items/login_item_details.dart';
 import '../login_items/note_item_details.dart';
 
@@ -32,6 +34,7 @@ class _HomeScreenState extends State<HomeScreen> {
   Widget build(BuildContext context) {
     final loginBox = Hive.box<LoginItem>('loginBox');
     final notesBox = Hive.box<NoteItem>('notesBox');
+    final cardsBox = Hive.box<CardItem>('cardsBox');
 
     return Scaffold(
       extendBody: true,
@@ -149,6 +152,7 @@ class _HomeScreenState extends State<HomeScreen> {
                         // Gather all items
                         final allLoginItems = loginBox.values.toList();
                         final allNoteItems = notesBox.values.toList();
+                        final allCardItems = cardsBox.values.toList();
 
                         List<dynamic> filteredItems = [];
 
@@ -162,6 +166,10 @@ class _HomeScreenState extends State<HomeScreen> {
                             item.title.toLowerCase().contains(_searchQuery.toLowerCase()) ||
                                 item.content.toLowerCase().contains(_searchQuery.toLowerCase())
                             ),
+                            ...allCardItems.where((item) =>
+                            item.number.toLowerCase().contains(_searchQuery.toLowerCase()) ||
+                                item.holderName.toLowerCase().contains(_searchQuery.toLowerCase())
+                            ),
                           ];
                         } else if (_selectedChip == 'Login') {
                           filteredItems = allLoginItems.where((item) =>
@@ -174,10 +182,10 @@ class _HomeScreenState extends State<HomeScreen> {
                               item.content.toLowerCase().contains(_searchQuery.toLowerCase())
                           ).toList();
                         } else if (_selectedChip == 'Card') {
-                          filteredItems = allLoginItems.where((item) =>
+                          filteredItems = allCardItems.where((item) =>
                           (item.type.toLowerCase() == 'card') &&
-                              (item.title.toLowerCase().contains(_searchQuery.toLowerCase()) ||
-                                  item.username.toLowerCase().contains(_searchQuery.toLowerCase()))
+                              (item.number.toLowerCase().contains(_searchQuery.toLowerCase()) ||
+                                  item.holderName.toLowerCase().contains(_searchQuery.toLowerCase()))
                           ).toList();
                         }
 
@@ -278,6 +286,36 @@ class _HomeScreenState extends State<HomeScreen> {
                                     style: const TextStyle(color: Colors.grey),
                                   ),
                                   trailing: const Icon(Icons.sticky_note_2_outlined, size: 28),
+                                ),
+                              );
+                            } else if (item is CardItem) {
+                              return Card(
+                                color: Colors.white,
+                                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                                elevation: 1,
+                                margin: const EdgeInsets.symmetric(vertical: 6),
+                                child: ListTile(
+                                  onTap: () {
+                                    showModalBottomSheet(
+                                      context: context,
+                                      isScrollControlled: true,
+                                      backgroundColor: Colors.transparent,
+                                      builder: (_) => CardDetailsBottomSheet(cardItem: item),
+                                    );
+                                  },
+                                  contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                                  title: Text(
+                                    '•••• •••• •••• ${item.number.substring(item.number.length - 4)}',
+                                    style: const TextStyle(
+                                      fontWeight: FontWeight.bold,
+                                      color: Color(0xFF328E6E),
+                                    ),
+                                  ),
+                                  subtitle: Text(
+                                    item.holderName,
+                                    style: const TextStyle(color: Colors.grey),
+                                  ),
+                                  trailing: const Icon(Icons.credit_card, size: 28),
                                 ),
                               );
                             } else {

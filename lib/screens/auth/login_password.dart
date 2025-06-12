@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:hive/hive.dart';
 import 'package:local_auth/local_auth.dart';
 import 'package:flutter/services.dart';
+import 'package:password_manager/models/card_item.dart';
 import 'package:password_manager/screens/main_screens/home.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -62,12 +63,16 @@ class _EnterPasswordScreenState extends State<EnterPasswordScreen> {
         'notesBox',
         encryptionCipher: HiveAesCipher(key),
       );
-
+      final cardsBox = await Hive.openBox<CardItem>(
+        'cardsBox',
+        encryptionCipher: HiveAesCipher(key),
+      );
       // Sync Firestore to Hive
       final firestore = FirebaseFirestore.instance;
       final syncService = SyncService(firestore: firestore, hiveBox: loginBox);
       await syncService.syncLoginItems(_savedEmail);
       await syncService.syncNoteItems(notesBox, _savedEmail);
+      await syncService.syncCardItems(cardsBox, _savedEmail);
     } catch (e) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text("Failed to sync items: $e")),

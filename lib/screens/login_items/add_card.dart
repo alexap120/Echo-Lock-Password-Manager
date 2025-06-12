@@ -1,8 +1,35 @@
+import 'dart:typed_data';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
+import 'package:hive/hive.dart';
+import '../../encryptItems.dart';
+import '../../keyManager.dart';
+import '../../models/card_item.dart';
 
-class AddCardPopup extends StatelessWidget {
+class AddCardPopup extends StatefulWidget {
   const AddCardPopup({super.key});
 
+  @override
+  State<AddCardPopup> createState() => _AddCardPopupState();
+}
+
+class _AddCardPopupState extends State<AddCardPopup> {
+  final numberController = TextEditingController();
+  final holderController = TextEditingController();
+  final expiryController = TextEditingController();
+  final cvvController = TextEditingController();
+  final pinController = TextEditingController();
+
+  @override
+  void dispose() {
+    numberController.dispose();
+    holderController.dispose();
+    expiryController.dispose();
+    cvvController.dispose();
+    pinController.dispose();
+    super.dispose();
+  }
 
   InputDecoration customUnderlineInput(String hint) {
     return InputDecoration(
@@ -15,6 +42,80 @@ class AddCardPopup extends StatelessWidget {
         borderSide: BorderSide(color: Color(0xFF328E6E), width: 2),
       ),
     );
+  }
+
+  Future<void> _saveCard() async {
+    if (numberController.text.isEmpty ||
+        holderController.text.isEmpty ||
+        expiryController.text.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Please fill in all required fields.'), backgroundColor: Colors.red),
+      );
+      return;
+    }
+
+    final userId = FirebaseAuth.instance.currentUser?.uid;
+    if (userId == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('User not logged in!')),
+      );
+      return;
+    }
+
+    final cardsBox = Hive.box<CardItem>('cardsBox');
+    Uint8List? derivedKey = await PBKDF2KeyManager.loadKeyFromLocal();
+    if (derivedKey == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Encryption key not found!')),
+      );
+      return;
+    }
+
+    // Encrypt sensitive fields
+    final encryptedNumber = await encryptAesGcm(derivedKey, numberController.text);
+    final encryptedCvv = await encryptAesGcm(derivedKey, cvvController.text);
+    final encryptedPin = await encryptAesGcm(derivedKey, pinController.text);
+
+    // Save locally (plaintext, since Hive box is encrypted)
+    final newCard = CardItem(
+      number: numberController.text,
+      holderName: holderController.text,
+      expiryDate: expiryController.text,
+      cvv: cvvController.text,
+      pin: pinController.text,
+    );
+    final index = await cardsBox.add(newCard);
+
+    try {
+      // Upload encrypted fields to Firestore
+      final docRef = await FirebaseFirestore.instance
+          .collection('users')
+          .doc(userId)
+          .collection('cards')
+          .add({
+        'number': encryptedNumber['ciphertext'],
+        'number_nonce': encryptedNumber['nonce'],
+        'number_tag': encryptedNumber['tag'],
+        'holderName': holderController.text,
+        'expiryDate': expiryController.text,
+        'cvv': encryptedCvv['ciphertext'],
+        'cvv_nonce': encryptedCvv['nonce'],
+        'cvv_tag': encryptedCvv['tag'],
+        'pin': encryptedPin['ciphertext'],
+        'pin_nonce': encryptedPin['nonce'],
+        'pin_tag': encryptedPin['tag'],
+      });
+
+      // Save Firestore doc ID in Hive
+      newCard.firestoreId = docRef.id;
+      await newCard.save();
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Failed to save to Firestore: $e')),
+      );
+    }
+
+    Navigator.of(context).pop();
   }
 
   @override
@@ -51,7 +152,6 @@ class AddCardPopup extends StatelessWidget {
               ],
             ),
             const SizedBox(height: 10),
-
             // Card preview mockup
             Container(
               height: 180,
@@ -74,7 +174,6 @@ class AddCardPopup extends StatelessWidget {
               ),
             ),
             const SizedBox(height: 25),
-
             // CARD NUMBER
             const Align(
               alignment: Alignment.centerLeft,
@@ -85,11 +184,11 @@ class AddCardPopup extends StatelessWidget {
             ),
             const SizedBox(height: 4),
             TextField(
+              controller: numberController,
               decoration: customUnderlineInput('4829 - 0921 - 8293 - 2837'),
               keyboardType: TextInputType.number,
             ),
             const SizedBox(height: 15),
-
             // CARD HOLDER
             const Align(
               alignment: Alignment.centerLeft,
@@ -100,10 +199,10 @@ class AddCardPopup extends StatelessWidget {
             ),
             const SizedBox(height: 4),
             TextField(
+              controller: holderController,
               decoration: customUnderlineInput('JOSEPH SMITH'),
             ),
             const SizedBox(height: 15),
-
             // EXPIRY & CVV
             Row(
               children: [
@@ -111,12 +210,13 @@ class AddCardPopup extends StatelessWidget {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text(
+                      const Text(
                         'EXPIRES ON',
                         style: TextStyle(fontSize: 12, color: Colors.grey),
                       ),
-                      SizedBox(height: 4),
+                      const SizedBox(height: 4),
                       TextField(
+                        controller: expiryController,
                         decoration: customUnderlineInput('02/28'),
                         keyboardType: TextInputType.datetime,
                       ),
@@ -128,12 +228,13 @@ class AddCardPopup extends StatelessWidget {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text(
+                      const Text(
                         '3-DIGIT CVV',
                         style: TextStyle(fontSize: 12, color: Colors.grey),
                       ),
-                      SizedBox(height: 4),
+                      const SizedBox(height: 4),
                       TextField(
+                        controller: cvvController,
                         decoration: customUnderlineInput('433'),
                         keyboardType: TextInputType.number,
                         obscureText: true,
@@ -144,7 +245,6 @@ class AddCardPopup extends StatelessWidget {
               ],
             ),
             const SizedBox(height: 15),
-
             // PIN Field
             const Align(
               alignment: Alignment.centerLeft,
@@ -155,19 +255,17 @@ class AddCardPopup extends StatelessWidget {
             ),
             const SizedBox(height: 4),
             TextField(
+              controller: pinController,
               decoration: customUnderlineInput('****'),
               keyboardType: TextInputType.number,
               obscureText: true,
             ),
             const SizedBox(height: 30),
-
             // Add Card Button
             SizedBox(
               width: double.infinity,
               child: ElevatedButton(
-                onPressed: () {
-                  Navigator.pop(context); // Close sheet after saving
-                },
+                onPressed: _saveCard,
                 style: ElevatedButton.styleFrom(
                   backgroundColor: const Color(0xFF328E6E),
                   shape: RoundedRectangleBorder(

@@ -1,6 +1,7 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:hive/hive.dart';
+import 'package:password_manager/models/card_item.dart';
 import 'package:password_manager/screens/auth/resetPassword/enter_email.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../../keyManager.dart';
@@ -187,6 +188,7 @@ class _LoginScreenState extends State<LoginScreen> {
 
                           late Box<LoginItem> loginBox;
                           late Box<NoteItem> notesBox;
+                          late Box<CardItem> cardsBox;
                           try {
                             loginBox = await Hive.openBox<LoginItem>(
                               'loginBox',
@@ -194,6 +196,10 @@ class _LoginScreenState extends State<LoginScreen> {
                             );
                             notesBox = await Hive.openBox<NoteItem>(
                               'notesBox',
+                              encryptionCipher: HiveAesCipher(key),
+                            );
+                            cardsBox = await Hive.openBox<CardItem>(
+                              'cardsBox',
                               encryptionCipher: HiveAesCipher(key),
                             );
                           } catch (e) {
@@ -209,6 +215,7 @@ class _LoginScreenState extends State<LoginScreen> {
                             final syncService = SyncService(firestore: firestore, hiveBox: loginBox);
                             await syncService.syncLoginItems(email);
                             await syncService.syncNoteItems(notesBox, email);
+                            await syncService.syncCardItems(cardsBox, email);
                           } catch (e) {
                             debugPrint("Sync error: $e");
                             ScaffoldMessenger.of(context).showSnackBar(
