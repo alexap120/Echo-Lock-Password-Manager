@@ -13,16 +13,21 @@ class NoteItem extends HiveObject {
   @HiveField(2)
   String? firestoreId;
 
+  @HiveField(3)
+  String syncStatus;
+
   NoteItem({
     required this.title,
     required this.content,
     this.firestoreId,
+    this.syncStatus = 'new',
   });
 
   Map<String, dynamic> toJson() {
     return {
       'title': title,
       'content': content,
+      'syncStatus': syncStatus,
     };
   }
 
@@ -30,6 +35,7 @@ class NoteItem extends HiveObject {
     return NoteItem(
       title: json['title'] ?? '',
       content: json['content'] ?? '',
+      syncStatus: json['syncStatus'] ?? 'synced',
     );
   }
 }

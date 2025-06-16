@@ -5,7 +5,7 @@ import 'package:flutter/services.dart';
 import '../../encryptItems.dart';
 import '../../keyManager.dart';
 import '../../models/card_item.dart';
-import '../../widgets/input_formatters.dart'; // Import your input formatters
+import '../../widgets/input_formatters.dart';
 
 class CardDetailsBottomSheet extends StatefulWidget {
   final CardItem cardItem;
@@ -54,9 +54,11 @@ class _CardDetailsBottomSheetState extends State<CardDetailsBottomSheet> {
       ..holderName = _holderController.text
       ..expiryDate = _expiryController.text
       ..cvv = _cvvController.text
-      ..pin = _pinController.text;
+      ..pin = _pinController.text
+      ..syncStatus = 'updated';
     await widget.cardItem.save();
 
+    // Optionally update Firestore immediately (not required for sync logic)
     final firestoreId = widget.cardItem.firestoreId;
     final userId = FirebaseAuth.instance.currentUser?.uid;
     if (firestoreId != null && userId != null) {
@@ -111,20 +113,11 @@ class _CardDetailsBottomSheetState extends State<CardDetailsBottomSheet> {
     );
 
     if (confirmed == true) {
-      final firestoreId = widget.cardItem.firestoreId;
-      final userId = FirebaseAuth.instance.currentUser?.uid;
-      if (firestoreId != null && userId != null) {
-        await FirebaseFirestore.instance
-            .collection('users')
-            .doc(userId)
-            .collection('cards')
-            .doc(firestoreId)
-            .delete();
-      }
-      await widget.cardItem.delete();
+      widget.cardItem.syncStatus = 'deleted';
+      await widget.cardItem.save();
       Navigator.pop(context);
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Card deleted')),
+        const SnackBar(content: Text('Card marked for deletion')),
       );
     }
   }
