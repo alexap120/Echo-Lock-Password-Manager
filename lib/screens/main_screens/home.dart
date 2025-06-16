@@ -308,7 +308,7 @@ class _HomeScreenState extends State<HomeScreen> {
                                     '•••• •••• •••• ${item.number.substring(item.number.length - 4)}',
                                     style: const TextStyle(
                                       fontWeight: FontWeight.bold,
-                                      color: Color(0xFF328E6E),
+                                      color: Color(0xFF90C67C),
                                     ),
                                   ),
                                   subtitle: Text(
