@@ -2,10 +2,13 @@ import 'dart:typed_data';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:hive/hive.dart';
+import 'package:icons_plus/icons_plus.dart';
 import '../../encryptItems.dart';
 import '../../keyManager.dart';
 import '../../models/card_item.dart';
+import '../../widgets/input_formatters.dart';
 
 class AddCardPopup extends StatefulWidget {
   const AddCardPopup({super.key});
@@ -185,8 +188,17 @@ class _AddCardPopupState extends State<AddCardPopup> {
             const SizedBox(height: 4),
             TextField(
               controller: numberController,
-              decoration: customUnderlineInput('4829 - 0921 - 8293 - 2837'),
+              inputFormatters: [CardNumberInputFormatter()],
               keyboardType: TextInputType.number,
+              decoration: customUnderlineInput('Card Number').copyWith(
+                suffixIcon: Padding(
+                  padding: const EdgeInsets.only(right: 12.0),
+                  child: _getCardLogo(detectCardType(numberController.text.replaceAll(RegExp(r'\D'), ''))),
+                ),
+              ),
+              onChanged: (value) {
+                setState(() {}); // To update the logo as user types
+              },
             ),
             const SizedBox(height: 15),
             // CARD HOLDER
@@ -217,8 +229,9 @@ class _AddCardPopupState extends State<AddCardPopup> {
                       const SizedBox(height: 4),
                       TextField(
                         controller: expiryController,
-                        decoration: customUnderlineInput('02/28'),
-                        keyboardType: TextInputType.datetime,
+                        decoration: customUnderlineInput('MM/YY'),
+                        keyboardType: TextInputType.number,
+                        inputFormatters: [ExpiryDateInputFormatter()],
                       ),
                     ],
                   ),
@@ -283,5 +296,19 @@ class _AddCardPopupState extends State<AddCardPopup> {
         ),
       ),
     );
+  }
+}
+
+
+Widget _getCardLogo(CardType type) {
+  switch (type) {
+    case CardType.visa:
+      return  Brand(Brands.visa, size: 24);
+    case CardType.mastercard:
+      return  Brand(Brands.mastercard, size: 24);
+    case CardType.amex:
+      return  Brand(Brands.american_express, size: 24);
+    default:
+      return const SizedBox.shrink();
   }
 }

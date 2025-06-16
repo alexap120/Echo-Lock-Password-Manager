@@ -1,9 +1,11 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import '../../encryptItems.dart';
 import '../../keyManager.dart';
 import '../../models/card_item.dart';
+import '../../widgets/input_formatters.dart'; // Import your input formatters
 
 class CardDetailsBottomSheet extends StatefulWidget {
   final CardItem cardItem;
@@ -127,7 +129,15 @@ class _CardDetailsBottomSheetState extends State<CardDetailsBottomSheet> {
     }
   }
 
-  Widget _buildEditableRow(String label, TextEditingController controller, {bool obscure = false, bool visible = false, VoidCallback? onToggle}) {
+  Widget _buildEditableRow(
+      String label,
+      TextEditingController controller, {
+        bool obscure = false,
+        bool visible = false,
+        VoidCallback? onToggle,
+        List<TextInputFormatter>? inputFormatters,
+        TextInputType? keyboardType,
+      }) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -137,6 +147,8 @@ class _CardDetailsBottomSheetState extends State<CardDetailsBottomSheet> {
             ? TextFormField(
           controller: controller,
           obscureText: obscure && !visible,
+          inputFormatters: inputFormatters,
+          keyboardType: keyboardType,
           decoration: InputDecoration(
             suffixIcon: obscure
                 ? IconButton(
@@ -150,9 +162,7 @@ class _CardDetailsBottomSheetState extends State<CardDetailsBottomSheet> {
           children: [
             Expanded(
               child: Text(
-                obscure && !visible
-                    ? '••••••••'
-                    : controller.text,
+                obscure && !visible ? '••••••••' : controller.text,
                 style: const TextStyle(fontSize: 16),
               ),
             ),
@@ -210,27 +220,54 @@ class _CardDetailsBottomSheetState extends State<CardDetailsBottomSheet> {
                 ],
               ),
               const SizedBox(height: 30),
-              _buildEditableRow('Card Number', _numberController, obscure: true, visible: _isNumberVisible, onToggle: () {
-                setState(() {
-                  _isNumberVisible = !_isNumberVisible;
-                });
-              }),
+              _buildEditableRow(
+                'Card Number',
+                _numberController,
+                obscure: true,
+                visible: _isNumberVisible,
+                onToggle: () {
+                  setState(() {
+                    _isNumberVisible = !_isNumberVisible;
+                  });
+                },
+                inputFormatters: _isEditing ? [CardNumberInputFormatter()] : null,
+                keyboardType: TextInputType.number,
+              ),
               const SizedBox(height: 20),
               _buildEditableRow('Card Holder', _holderController),
               const SizedBox(height: 20),
-              _buildEditableRow('Expiry Date', _expiryController),
+              _buildEditableRow(
+                'Expiry Date',
+                _expiryController,
+                inputFormatters: _isEditing ? [ExpiryDateInputFormatter()] : null,
+                keyboardType: TextInputType.number,
+              ),
               const SizedBox(height: 20),
-              _buildEditableRow('CVV', _cvvController, obscure: true, visible: _isCvvVisible, onToggle: () {
-                setState(() {
-                  _isCvvVisible = !_isCvvVisible;
-                });
-              }),
+              _buildEditableRow(
+                'CVV',
+                _cvvController,
+                obscure: true,
+                visible: _isCvvVisible,
+                onToggle: () {
+                  setState(() {
+                    _isCvvVisible = !_isCvvVisible;
+                  });
+                },
+                keyboardType: TextInputType.number,
+              ),
               const SizedBox(height: 20),
-              _buildEditableRow('PIN', _pinController, obscure: true, visible: _isPinVisible, onToggle: () {
-                setState(() {
-                  _isPinVisible = !_isPinVisible;
-                });
-              }),
+              _buildEditableRow(
+                'PIN',
+                _pinController,
+                obscure: true,
+                visible: _isPinVisible,
+                onToggle: () {
+                  setState(() {
+                    _isPinVisible = !_isPinVisible;
+                  });
+                },
+                keyboardType: TextInputType.number,
+              ),
               const SizedBox(height: 30),
               ElevatedButton.icon(
                 style: ElevatedButton.styleFrom(
