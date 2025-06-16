@@ -86,7 +86,6 @@ class _AddCardPopupState extends State<AddCardPopup> {
       expiryDate: expiryController.text,
       cvv: cvvController.text,
       pin: pinController.text,
-      syncStatus: 'new',
     );
     final index = await cardsBox.add(newCard);
 

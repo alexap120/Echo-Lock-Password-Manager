@@ -196,7 +196,6 @@ class _AddLoginPopupState extends State<AddLoginPopup> {
                             title: nameController.text,
                             username: usernameController.text,
                             password: passwordController.text,
-                            syncStatus: 'new',
                           );
 
                           // 1. Save locally in Hive as plaintext (you can encrypt locally if you want too)
