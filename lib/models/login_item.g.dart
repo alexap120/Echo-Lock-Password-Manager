@@ -21,7 +21,7 @@ class LoginItemAdapter extends TypeAdapter<LoginItem> {
       username: fields[1] as String,
       password: fields[2] as String,
       firestoreId: fields[3] as String?,
-      syncStatus: fields[4] as String,
+      syncStatus: fields[4] as String? ?? 'synced',
     );
   }
 

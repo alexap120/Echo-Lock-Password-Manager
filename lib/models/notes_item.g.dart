@@ -20,7 +20,8 @@ class NoteItemAdapter extends TypeAdapter<NoteItem> {
       title: fields[0] as String,
       content: fields[1] as String,
       firestoreId: fields[2] as String?,
-      syncStatus: fields[3] as String,
+      syncStatus: fields[3] as String? ?? 'synced',
+
     );
   }
 
