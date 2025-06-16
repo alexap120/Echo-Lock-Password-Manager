@@ -52,9 +52,9 @@ class SyncService {
         firestoreIds.add(doc.id);
         final data = doc.data();
         final encryptedPassword = {
-          'ciphertext': data['password'] as String,
-          'nonce': data['nonce'] as String,
-          'tag': data['tag'] as String,
+          'ciphertext': data['password'] as String? ?? '',
+          'nonce': data['nonce'] as String? ?? '',
+          'tag': data['tag'] as String? ?? '',
         };
         final decryptedPassword = await decryptAesGcm(key, encryptedPassword);
 
