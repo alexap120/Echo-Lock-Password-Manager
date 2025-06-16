@@ -125,7 +125,6 @@ class _AddNotePopupState extends State<AddNotePopup> {
                       final newItem = NoteItem(
                         title: titleController.text,
                         content: noteController.text,
-                        syncStatus: 'new',
                       );
 
                       final index = await notesBox.add(newItem);

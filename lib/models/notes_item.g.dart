@@ -20,23 +20,19 @@ class NoteItemAdapter extends TypeAdapter<NoteItem> {
       title: fields[0] as String,
       content: fields[1] as String,
       firestoreId: fields[2] as String?,
-      syncStatus: fields[3] as String? ?? 'synced',
-
     );
   }
 
   @override
   void write(BinaryWriter writer, NoteItem obj) {
     writer
-      ..writeByte(4)
+      ..writeByte(3)
       ..writeByte(0)
       ..write(obj.title)
       ..writeByte(1)
       ..write(obj.content)
       ..writeByte(2)
-      ..write(obj.firestoreId)
-      ..writeByte(3)
-      ..write(obj.syncStatus);
+      ..write(obj.firestoreId);
   }
 
   @override

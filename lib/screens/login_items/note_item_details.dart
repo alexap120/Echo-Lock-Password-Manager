@@ -36,8 +36,7 @@ class _NoteDetailsBottomSheetState extends State<NoteDetailsBottomSheet> {
   Future<void> _save() async {
     widget.noteItem
       ..title = _titleController.text
-      ..content = _contentController.text
-      ..syncStatus = 'updated';
+      ..content = _contentController.text;
     await widget.noteItem.save();
 
     final firestoreId = widget.noteItem.firestoreId;
@@ -88,11 +87,20 @@ class _NoteDetailsBottomSheetState extends State<NoteDetailsBottomSheet> {
     );
 
     if (confirmed == true) {
-      widget.noteItem.syncStatus = 'deleted';
-      await widget.noteItem.save();
+      final firestoreId = widget.noteItem.firestoreId;
+      final userId = FirebaseAuth.instance.currentUser?.uid;
+      if (firestoreId != null && userId != null) {
+        await FirebaseFirestore.instance
+            .collection('users')
+            .doc(userId)
+            .collection('notes')
+            .doc(firestoreId)
+            .delete();
+      }
+      await widget.noteItem.delete();
       Navigator.pop(context);
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Note marked for deletion')),
+        const SnackBar(content: Text('Note deleted')),
       );
     }
   }
@@ -112,6 +120,7 @@ class _NoteDetailsBottomSheetState extends State<NoteDetailsBottomSheet> {
           padding: const EdgeInsets.all(20),
           child: Column(
             children: [
+              // Drag handle
               Center(
                 child: Container(
                   width: 40,
@@ -123,6 +132,7 @@ class _NoteDetailsBottomSheetState extends State<NoteDetailsBottomSheet> {
                   ),
                 ),
               ),
+              // Main content
               Expanded(
                 child: ListView(
                   controller: scrollController,
@@ -163,6 +173,7 @@ class _NoteDetailsBottomSheetState extends State<NoteDetailsBottomSheet> {
                   ],
                 ),
               ),
+              // Buttons at the bottom
               Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
