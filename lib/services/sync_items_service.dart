@@ -20,10 +20,9 @@ class SyncService {
     try {
       final loginsCollection = firestore
           .collection('users')
-          .doc(userId)
+          .doc(FirebaseAuth.instance.currentUser?.uid)
           .collection('logins');
-
-      // 1. Push local changes to Firestore
+      
       for (var item in hiveBox.values.toList()) {
         if (item.syncStatus == 'new') {
           // Encrypt password before upload (implement as needed)
@@ -92,7 +91,6 @@ class SyncService {
       print('Error syncing login items: $e');
     }
   }
-
 
   Future<void> syncNoteItems(Box<NoteItem> notesBox, String userId) async {
     try {
@@ -178,7 +176,6 @@ class SyncService {
       print('Error syncing note items: $e');
     }
   }
-
 
   Future<void> syncCardItems(Box<CardItem> cardsBox, String userId) async {
     try {
