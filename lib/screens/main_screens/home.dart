@@ -131,11 +131,11 @@ class _HomeScreenState extends State<HomeScreen> {
                         children: [
                           _buildChip('All'),
                           const SizedBox(width: 8),
-                          _buildChip('Login'),
+                          _buildChip('Logins'),
                           const SizedBox(width: 8),
-                          _buildChip('Secure Note'),
+                          _buildChip('Notes'),
                           const SizedBox(width: 8),
-                          _buildChip('Card'),
+                          _buildChip('Cards'),
                         ],
                       ),
                     ),
@@ -171,17 +171,17 @@ class _HomeScreenState extends State<HomeScreen> {
                                 item.holderName.toLowerCase().contains(_searchQuery.toLowerCase())
                             ),
                           ];
-                        } else if (_selectedChip == 'Login') {
+                        } else if (_selectedChip == 'Logins') {
                           filteredItems = allLoginItems.where((item) =>
                           item.title.toLowerCase().contains(_searchQuery.toLowerCase()) ||
                               item.username.toLowerCase().contains(_searchQuery.toLowerCase())
                           ).toList();
-                        } else if (_selectedChip == 'Secure Note') {
+                        } else if (_selectedChip == 'Notes') {
                           filteredItems = allNoteItems.where((item) =>
                           item.title.toLowerCase().contains(_searchQuery.toLowerCase()) ||
                               item.content.toLowerCase().contains(_searchQuery.toLowerCase())
                           ).toList();
-                        } else if (_selectedChip == 'Card') {
+                        } else if (_selectedChip == 'Cards') {
                           filteredItems = allCardItems.where((item) =>
                           (item.type.toLowerCase() == 'card') &&
                               (item.number.toLowerCase().contains(_searchQuery.toLowerCase()) ||
