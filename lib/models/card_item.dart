@@ -22,6 +22,9 @@ class CardItem extends HiveObject {
   @HiveField(5)
   String? firestoreId; // Optional, not final to allow later updates
 
+  @HiveField(6)
+  String syncStatus;
+
   CardItem({
     required this.number,
     required this.holderName,
@@ -29,6 +32,7 @@ class CardItem extends HiveObject {
     this.cvv,
     this.pin,
     this.firestoreId,
+    this.syncStatus = 'new', // Default to 'new'
   });
 
   String get type => 'Card';
@@ -40,6 +44,7 @@ class CardItem extends HiveObject {
       'expiryDate': expiryDate,
       'cvv': cvv,
       'pin': pin,
+      'syncStatus': syncStatus,
     };
   }
 
@@ -50,6 +55,7 @@ class CardItem extends HiveObject {
       expiryDate: json['expiryDate'] ?? '',
       cvv: json['cvv'],
       pin: json['pin'],
+      syncStatus: json['syncStatus'] ?? 'synced',
     );
   }
 }

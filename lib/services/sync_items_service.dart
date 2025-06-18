@@ -20,64 +20,116 @@ class SyncService {
     try {
       final loginsCollection = firestore
           .collection('users')
-          .doc(FirebaseAuth.instance.currentUser?.uid)
+          .doc(userId)
           .collection('logins');
-      final querySnapshot = await loginsCollection.get();
 
+      // 1. Push local changes to Firestore
+      for (var item in hiveBox.values.toList()) {
+        if (item.syncStatus == 'new') {
+          // Encrypt password before upload (implement as needed)
+          // final encrypted = await encryptAesGcm(...);
+          final docRef = await loginsCollection.add(item.toJson());
+          item.firestoreId = docRef.id;
+          item.syncStatus = 'synced';
+          await item.save();
+        } else if (item.syncStatus == 'updated' && item.firestoreId != null) {
+          await loginsCollection.doc(item.firestoreId).update(item.toJson());
+          item.syncStatus = 'synced';
+          await item.save();
+        } else if (item.syncStatus == 'deleted' && item.firestoreId != null) {
+          await loginsCollection.doc(item.firestoreId).delete();
+          await item.delete();
+        }
+      }
+
+      // 2. Pull from Firestore and update Hive
+      final querySnapshot = await loginsCollection.get();
       Uint8List? key = await PBKDF2KeyManager.loadKeyFromLocal();
       if (key == null) throw Exception('Encryption key not found');
 
+      final firestoreIds = <String>{};
       for (var doc in querySnapshot.docs) {
+        firestoreIds.add(doc.id);
         final data = doc.data();
-
         final encryptedPassword = {
           'ciphertext': data['password'] as String,
           'nonce': data['nonce'] as String,
           'tag': data['tag'] as String,
         };
-
         final decryptedPassword = await decryptAesGcm(key, encryptedPassword);
 
-        // Check if item with this firestoreId exists
         final existing = hiveBox.values.firstWhereOrNull(
               (item) => item.firestoreId == doc.id,
         );
 
         if (existing != null) {
-          // Update existing item
           existing
             ..title = data['title'] ?? ''
             ..username = data['username'] ?? ''
-            ..password = decryptedPassword;
+            ..password = decryptedPassword
+            ..syncStatus = 'synced';
           await existing.save();
         } else {
-          // Add new item and set firestoreId
           final loginItem = LoginItem(
             title: data['title'] ?? '',
             username: data['username'] ?? '',
             password: decryptedPassword,
             firestoreId: doc.id,
+            syncStatus: 'synced',
           );
           await hiveBox.add(loginItem);
         }
+      }
+
+      // 3. Remove from Hive any item with firestoreId not in Firestore
+      final toDelete = hiveBox.values
+          .where((item) => item.firestoreId != null && !firestoreIds.contains(item.firestoreId))
+          .toList();
+      for (var item in toDelete) {
+        await item.delete();
       }
     } catch (e) {
       print('Error syncing login items: $e');
     }
   }
 
+
   Future<void> syncNoteItems(Box<NoteItem> notesBox, String userId) async {
     try {
       final notesCollection = firestore
           .collection('users')
-          .doc(FirebaseAuth.instance.currentUser?.uid)
+          .doc(userId)
           .collection('notes');
-      final querySnapshot = await notesCollection.get();
 
+      // 1. Push local changes to Firestore
+      for (var item in notesBox.values.toList()) {
+        if (item.syncStatus == 'new') {
+          // Encrypt fields before upload (implement as needed)
+          // final encryptedTitle = await encryptAesGcm(...);
+          // final encryptedContent = await encryptAesGcm(...);
+          // Upload encrypted fields and store non-encrypted fields as needed
+          final docRef = await notesCollection.add(item.toJson());
+          item.firestoreId = docRef.id;
+          item.syncStatus = 'synced';
+          await item.save();
+        } else if (item.syncStatus == 'updated' && item.firestoreId != null) {
+          await notesCollection.doc(item.firestoreId).update(item.toJson());
+          item.syncStatus = 'synced';
+          await item.save();
+        } else if (item.syncStatus == 'deleted' && item.firestoreId != null) {
+          await notesCollection.doc(item.firestoreId).delete();
+          await item.delete();
+        }
+      }
+
+      // 2. Pull from Firestore and update Hive
+      final querySnapshot = await notesCollection.get();
       Uint8List? key = await PBKDF2KeyManager.loadKeyFromLocal();
       if (key == null) throw Exception('Encryption key not found');
 
+      final firestoreIds = <String>{};
       for (var doc in querySnapshot.docs) {
+        firestoreIds.add(doc.id);
         final data = doc.data();
 
         final encryptedTitle = {
@@ -101,34 +153,70 @@ class SyncService {
         if (existing != null) {
           existing
             ..title = decryptedTitle
-            ..content = decryptedContent;
+            ..content = decryptedContent
+            ..syncStatus = 'synced';
           await existing.save();
         } else {
           final noteItem = NoteItem(
             title: decryptedTitle,
             content: decryptedContent,
             firestoreId: doc.id,
+            syncStatus: 'synced',
           );
           await notesBox.add(noteItem);
         }
+      }
+
+      // 3. Remove from Hive any item with firestoreId not in Firestore
+      final toDelete = notesBox.values
+          .where((item) => item.firestoreId != null && !firestoreIds.contains(item.firestoreId))
+          .toList();
+      for (var item in toDelete) {
+        await item.delete();
       }
     } catch (e) {
       print('Error syncing note items: $e');
     }
   }
 
+
   Future<void> syncCardItems(Box<CardItem> cardsBox, String userId) async {
     try {
       final cardsCollection = firestore
           .collection('users')
-          .doc(FirebaseAuth.instance.currentUser?.uid)
+          .doc(userId)
           .collection('cards');
-      final querySnapshot = await cardsCollection.get();
 
+      // 1. Push local changes to Firestore
+      for (var item in cardsBox.values.toList()) {
+        if (item.syncStatus == 'new') {
+          // Encrypt fields before upload (implement as needed)
+          // final encryptedNumber = await encryptAesGcm(...);
+          // final encryptedCvv = await encryptAesGcm(...);
+          // final encryptedPin = await encryptAesGcm(...);
+          // Upload encrypted fields and store non-encrypted fields as needed
+          final docRef = await cardsCollection.add(item.toJson());
+          item.firestoreId = docRef.id;
+          item.syncStatus = 'synced';
+          await item.save();
+        } else if (item.syncStatus == 'updated' && item.firestoreId != null) {
+          await cardsCollection.doc(item.firestoreId).update(item.toJson());
+          item.syncStatus = 'synced';
+          await item.save();
+        } else if (item.syncStatus == 'deleted' && item.firestoreId != null) {
+          await cardsCollection.doc(item.firestoreId).delete();
+          await item.delete();
+        }
+      }
+
+      // 2. Pull from Firestore and update Hive
+      final querySnapshot = await cardsCollection.get();
       Uint8List? key = await PBKDF2KeyManager.loadKeyFromLocal();
       if (key == null) throw Exception('Encryption key not found');
 
+      final firestoreIds = <String>{};
       for (var doc in querySnapshot.docs) {
+        firestoreIds.add(doc.id);
         final data = doc.data();
 
         final encryptedNumber = {
@@ -161,7 +249,8 @@ class SyncService {
             ..holderName = data['holderName'] ?? ''
             ..expiryDate = data['expiryDate'] ?? ''
             ..cvv = decryptedCvv
-            ..pin = decryptedPin;
+            ..pin = decryptedPin
+            ..syncStatus = 'synced';
           await existing.save();
         } else {
           final cardItem = CardItem(
@@ -171,9 +260,18 @@ class SyncService {
             cvv: decryptedCvv,
             pin: decryptedPin,
             firestoreId: doc.id,
+            syncStatus: 'synced',
           );
           await cardsBox.add(cardItem);
         }
+      }
+
+      // 3. Remove from Hive any item with firestoreId not in Firestore
+      final toDelete = cardsBox.values
+          .where((item) => item.firestoreId != null && !firestoreIds.contains(item.firestoreId))
+          .toList();
+      for (var item in toDelete) {
+        await item.delete();
       }
     } catch (e) {
       print('Error syncing card items: $e');

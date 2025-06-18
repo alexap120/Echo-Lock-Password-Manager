@@ -1,9 +1,11 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import '../../encryptItems.dart';
 import '../../keyManager.dart';
 import '../../models/card_item.dart';
+import '../../widgets/input_formatters.dart';
 
 class CardDetailsBottomSheet extends StatefulWidget {
   final CardItem cardItem;
@@ -52,9 +54,11 @@ class _CardDetailsBottomSheetState extends State<CardDetailsBottomSheet> {
       ..holderName = _holderController.text
       ..expiryDate = _expiryController.text
       ..cvv = _cvvController.text
-      ..pin = _pinController.text;
+      ..pin = _pinController.text
+      ..syncStatus = 'updated';
     await widget.cardItem.save();
 
+    // Optionally update Firestore immediately (not required for sync logic)
     final firestoreId = widget.cardItem.firestoreId;
     final userId = FirebaseAuth.instance.currentUser?.uid;
     if (firestoreId != null && userId != null) {
@@ -109,25 +113,24 @@ class _CardDetailsBottomSheetState extends State<CardDetailsBottomSheet> {
     );
 
     if (confirmed == true) {
-      final firestoreId = widget.cardItem.firestoreId;
-      final userId = FirebaseAuth.instance.currentUser?.uid;
-      if (firestoreId != null && userId != null) {
-        await FirebaseFirestore.instance
-            .collection('users')
-            .doc(userId)
-            .collection('cards')
-            .doc(firestoreId)
-            .delete();
-      }
-      await widget.cardItem.delete();
+      widget.cardItem.syncStatus = 'deleted';
+      await widget.cardItem.save();
       Navigator.pop(context);
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Card deleted')),
+        const SnackBar(content: Text('Card marked for deletion')),
       );
     }
   }
 
-  Widget _buildEditableRow(String label, TextEditingController controller, {bool obscure = false, bool visible = false, VoidCallback? onToggle}) {
+  Widget _buildEditableRow(
+      String label,
+      TextEditingController controller, {
+        bool obscure = false,
+        bool visible = false,
+        VoidCallback? onToggle,
+        List<TextInputFormatter>? inputFormatters,
+        TextInputType? keyboardType,
+      }) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -137,6 +140,8 @@ class _CardDetailsBottomSheetState extends State<CardDetailsBottomSheet> {
             ? TextFormField(
           controller: controller,
           obscureText: obscure && !visible,
+          inputFormatters: inputFormatters,
+          keyboardType: keyboardType,
           decoration: InputDecoration(
             suffixIcon: obscure
                 ? IconButton(
@@ -150,9 +155,7 @@ class _CardDetailsBottomSheetState extends State<CardDetailsBottomSheet> {
           children: [
             Expanded(
               child: Text(
-                obscure && !visible
-                    ? '••••••••'
-                    : controller.text,
+                obscure && !visible ? '••••••••' : controller.text,
                 style: const TextStyle(fontSize: 16),
               ),
             ),
@@ -210,27 +213,54 @@ class _CardDetailsBottomSheetState extends State<CardDetailsBottomSheet> {
                 ],
               ),
               const SizedBox(height: 30),
-              _buildEditableRow('Card Number', _numberController, obscure: true, visible: _isNumberVisible, onToggle: () {
-                setState(() {
-                  _isNumberVisible = !_isNumberVisible;
-                });
-              }),
+              _buildEditableRow(
+                'Card Number',
+                _numberController,
+                obscure: true,
+                visible: _isNumberVisible,
+                onToggle: () {
+                  setState(() {
+                    _isNumberVisible = !_isNumberVisible;
+                  });
+                },
+                inputFormatters: _isEditing ? [CardNumberInputFormatter()] : null,
+                keyboardType: TextInputType.number,
+              ),
               const SizedBox(height: 20),
               _buildEditableRow('Card Holder', _holderController),
               const SizedBox(height: 20),
-              _buildEditableRow('Expiry Date', _expiryController),
+              _buildEditableRow(
+                'Expiry Date',
+                _expiryController,
+                inputFormatters: _isEditing ? [ExpiryDateInputFormatter()] : null,
+                keyboardType: TextInputType.number,
+              ),
               const SizedBox(height: 20),
-              _buildEditableRow('CVV', _cvvController, obscure: true, visible: _isCvvVisible, onToggle: () {
-                setState(() {
-                  _isCvvVisible = !_isCvvVisible;
-                });
-              }),
+              _buildEditableRow(
+                'CVV',
+                _cvvController,
+                obscure: true,
+                visible: _isCvvVisible,
+                onToggle: () {
+                  setState(() {
+                    _isCvvVisible = !_isCvvVisible;
+                  });
+                },
+                keyboardType: TextInputType.number,
+              ),
               const SizedBox(height: 20),
-              _buildEditableRow('PIN', _pinController, obscure: true, visible: _isPinVisible, onToggle: () {
-                setState(() {
-                  _isPinVisible = !_isPinVisible;
-                });
-              }),
+              _buildEditableRow(
+                'PIN',
+                _pinController,
+                obscure: true,
+                visible: _isPinVisible,
+                onToggle: () {
+                  setState(() {
+                    _isPinVisible = !_isPinVisible;
+                  });
+                },
+                keyboardType: TextInputType.number,
+              ),
               const SizedBox(height: 30),
               ElevatedButton.icon(
                 style: ElevatedButton.styleFrom(
