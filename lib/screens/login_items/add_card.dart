@@ -9,6 +9,7 @@ import '../../encryptItems.dart';
 import '../../keyManager.dart';
 import '../../models/card_item.dart';
 import '../../widgets/input_formatters.dart';
+import 'package:connectivity_plus/connectivity_plus.dart';
 
 class AddCardPopup extends StatefulWidget {
   const AddCardPopup({super.key});
@@ -50,7 +51,8 @@ class _AddCardPopupState extends State<AddCardPopup> {
   Future<void> _saveCard() async {
     if (numberController.text.isEmpty ||
         holderController.text.isEmpty ||
-        expiryController.text.isEmpty) {
+        expiryController.text.isEmpty ||
+        cvvController.text.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Please fill in all required fields.'), backgroundColor: Colors.red),
       );
@@ -67,6 +69,7 @@ class _AddCardPopupState extends State<AddCardPopup> {
 
     final cardsBox = Hive.box<CardItem>('cardsBox');
     Uint8List? derivedKey = await PBKDF2KeyManager.loadKeyFromLocal();
+
     if (derivedKey == null) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Encryption key not found!')),
@@ -74,24 +77,30 @@ class _AddCardPopupState extends State<AddCardPopup> {
       return;
     }
 
-    // Encrypt sensitive fields
-    final encryptedNumber = await encryptAesGcm(derivedKey, numberController.text);
-    final encryptedCvv = await encryptAesGcm(derivedKey, cvvController.text);
-    final encryptedPin = await encryptAesGcm(derivedKey, pinController.text);
-
-    // Save locally (plaintext, since Hive box is encrypted)
+    // Save locally in Hive (plaintext, since Hive is encrypted)
     final newCard = CardItem(
       number: numberController.text,
       holderName: holderController.text,
       expiryDate: expiryController.text,
       cvv: cvvController.text,
-      pin: pinController.text,
+      pin: pinController.text.isNotEmpty ? pinController.text : null,
       syncStatus: 'new',
     );
     final index = await cardsBox.add(newCard);
 
+    // Try to sync to Firestore only if online
+    final connectivityResult = await Connectivity().checkConnectivity();
+    if (connectivityResult.first == ConnectivityResult.none) {
+      Navigator.of(context).pop();
+      return;
+    }
+
     try {
-      // Upload encrypted fields to Firestore
+      // Encrypt sensitive fields
+      final encryptedNumber = await encryptAesGcm(derivedKey, numberController.text);
+      final encryptedCvv = await encryptAesGcm(derivedKey, cvvController.text);
+      final encryptedPin = await encryptAesGcm(derivedKey, pinController.text);
+
       final docRef = await FirebaseFirestore.instance
           .collection('users')
           .doc(userId)
@@ -110,8 +119,9 @@ class _AddCardPopupState extends State<AddCardPopup> {
         'pin_tag': encryptedPin['tag'],
       });
 
-      // Save Firestore doc ID in Hive
+      // Update Hive item with Firestore ID and sync status
       newCard.firestoreId = docRef.id;
+      newCard.syncStatus = 'synced';
       await newCard.save();
     } catch (e) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -300,15 +310,14 @@ class _AddCardPopupState extends State<AddCardPopup> {
   }
 }
 
-
 Widget _getCardLogo(CardType type) {
   switch (type) {
     case CardType.visa:
-      return  Brand(Brands.visa, size: 24);
+      return Brand(Brands.visa, size: 24);
     case CardType.mastercard:
-      return  Brand(Brands.mastercard, size: 24);
+      return Brand(Brands.mastercard, size: 24);
     case CardType.amex:
-      return  Brand(Brands.american_express, size: 24);
+      return Brand(Brands.american_express, size: 24);
     default:
       return const SizedBox.shrink();
   }

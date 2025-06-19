@@ -26,6 +26,7 @@ dependencies:
   hive: ^2.2.3
   cryptography: ^2.7.0
   icons_plus: ^5.0.0
+  connectivity_plus: ^6.1.4
 
 dev_dependencies:
   flutter_test:

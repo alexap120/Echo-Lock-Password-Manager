@@ -1,13 +1,13 @@
+import 'dart:typed_data';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
+import 'package:connectivity_plus/connectivity_plus.dart';
 import 'package:hive/hive.dart';
 import 'package:password_manager/models/notes_item.dart';
 import '../../encryptItems.dart';
 import '../../keyManager.dart';
 import '../../widgets/custom_input_field.dart';
-import 'dart:math';
-import 'dart:typed_data';
 
 class AddNotePopup extends StatefulWidget {
   const AddNotePopup({super.key});
@@ -19,6 +19,87 @@ class AddNotePopup extends StatefulWidget {
 class _AddNotePopupState extends State<AddNotePopup> {
   final TextEditingController titleController = TextEditingController();
   final TextEditingController noteController = TextEditingController();
+
+  @override
+  void dispose() {
+    titleController.dispose();
+    noteController.dispose();
+    super.dispose();
+  }
+
+  Future<void> _saveNote() async {
+    if (titleController.text.isEmpty || noteController.text.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Please fill in all required fields.'),
+          backgroundColor: Colors.red,
+          duration: Duration(seconds: 2),
+        ),
+      );
+      return;
+    }
+
+    final userId = FirebaseAuth.instance.currentUser?.uid;
+    if (userId == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('User not logged in!')),
+      );
+      return;
+    }
+
+    final notesBox = Hive.box<NoteItem>('notesBox');
+    Uint8List? derivedKey = await PBKDF2KeyManager.loadKeyFromLocal();
+
+    if (derivedKey == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Encryption key not found!')),
+      );
+      return;
+    }
+
+    // Save locally in Hive as plaintext
+    final newItem = NoteItem(
+      title: titleController.text,
+      content: noteController.text,
+      syncStatus: 'new',
+    );
+    final index = await notesBox.add(newItem);
+
+    // Try to sync to Firestore only if online
+    final connectivityResult = await Connectivity().checkConnectivity();
+    if (connectivityResult.first == ConnectivityResult.none) {
+      Navigator.of(context).pop();
+      return;
+    }
+
+    try {
+      final encryptedTitleMap = await encryptAesGcm(derivedKey, titleController.text);
+      final encryptedContentMap = await encryptAesGcm(derivedKey, noteController.text);
+
+      final docRef = await FirebaseFirestore.instance
+          .collection('users')
+          .doc(userId)
+          .collection('notes')
+          .add({
+        'title': encryptedTitleMap['ciphertext'],
+        'title_nonce': encryptedTitleMap['nonce'],
+        'title_tag': encryptedTitleMap['tag'],
+        'content': encryptedContentMap['ciphertext'],
+        'content_nonce': encryptedContentMap['nonce'],
+        'content_tag': encryptedContentMap['tag'],
+      });
+
+      newItem.firestoreId = docRef.id;
+      newItem.syncStatus = 'synced';
+      await newItem.save();
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Failed to save to Firestore: $e')),
+      );
+    }
+
+    Navigator.of(context).pop();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -36,13 +117,12 @@ class _AddNotePopupState extends State<AddNotePopup> {
       body: SafeArea(
         child: Stack(
           children: [
-            // Positioned background container
             Positioned(
               top: -150,
               left: -100,
               right: -100,
               child: Container(
-                height: 250, // Adjust height as needed
+                height: 250,
                 decoration: const BoxDecoration(
                   borderRadius: BorderRadius.vertical(
                     bottom: Radius.elliptical(300, 100),
@@ -51,7 +131,6 @@ class _AddNotePopupState extends State<AddNotePopup> {
                 ),
               ),
             ),
-            // Main content
             Column(
               children: [
                 Expanded(
@@ -86,76 +165,7 @@ class _AddNotePopupState extends State<AddNotePopup> {
                       ),
                       padding: const EdgeInsets.symmetric(vertical: 16),
                     ),
-                    onPressed: () async {
-                      if (titleController.text.isEmpty || noteController.text.isEmpty) {
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(
-                            content: Text('Please fill in all required fields.'),
-                            backgroundColor: Colors.red,
-                            duration: Duration(seconds: 2),
-                          ),
-                        );
-                        return;
-                      }
-
-                      final userId = FirebaseAuth.instance.currentUser?.uid;
-                      if (userId == null) {
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(content: Text('User not logged in!')),
-                        );
-                        return;
-                      }
-
-                      final notesBox = Hive.box<NoteItem>('notesBox');
-
-                      Uint8List? derivedKey = await PBKDF2KeyManager.loadKeyFromLocal();
-
-                      if (derivedKey == null) {
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(content: Text('Encryption key not found!')),
-                        );
-                        return;
-                      }
-
-                      // Encrypt title and content
-                      final encryptedTitleMap = await encryptAesGcm(derivedKey, titleController.text);
-                      final encryptedContentMap = await encryptAesGcm(derivedKey, noteController.text);
-
-                      // Save decrypted version locally
-                      final newItem = NoteItem(
-                        title: titleController.text,
-                        content: noteController.text,
-                        syncStatus: 'new',
-                      );
-
-                      final index = await notesBox.add(newItem);
-
-                      try {
-                        // Upload encrypted values to Firestore
-                        final docRef = await FirebaseFirestore.instance
-                            .collection('users')
-                            .doc(userId)
-                            .collection('notes')
-                            .add({
-                          'title': encryptedTitleMap['ciphertext'],
-                          'title_nonce': encryptedTitleMap['nonce'],
-                          'title_tag': encryptedTitleMap['tag'],
-                          'content': encryptedContentMap['ciphertext'],
-                          'content_nonce': encryptedContentMap['nonce'],
-                          'content_tag': encryptedContentMap['tag'],
-                        });
-
-                        // Save Firestore doc ID locally
-                        newItem.firestoreId = docRef.id;
-                        await newItem.save();
-                      } catch (e) {
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          SnackBar(content: Text('Failed to save to Firestore: $e')),
-                        );
-                      }
-
-                      Navigator.of(context).pop();
-                    },
+                    onPressed: _saveNote,
                     child: const Text(
                       "Save",
                       style: TextStyle(fontSize: 16, color: Colors.white),
