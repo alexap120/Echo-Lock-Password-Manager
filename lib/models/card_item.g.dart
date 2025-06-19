@@ -20,7 +20,7 @@ class CardItemAdapter extends TypeAdapter<CardItem> {
       number: fields[0] as String,
       holderName: fields[1] as String,
       expiryDate: fields[2] as String,
-      cvv: fields[3] as String?,
+      cvv: fields[3] as String,
       pin: fields[4] as String?,
       firestoreId: fields[5] as String?,
       syncStatus: fields[6] as String,

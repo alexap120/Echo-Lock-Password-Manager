@@ -14,7 +14,7 @@ class CardItem extends HiveObject {
   String expiryDate;
 
   @HiveField(3)
-  String? cvv;
+  String cvv;
 
   @HiveField(4)
   String? pin; // Optional
@@ -29,7 +29,7 @@ class CardItem extends HiveObject {
     required this.number,
     required this.holderName,
     required this.expiryDate,
-    this.cvv,
+    required this.cvv,
     this.pin,
     this.firestoreId,
     this.syncStatus = 'new', // Default to 'new'
@@ -53,7 +53,7 @@ class CardItem extends HiveObject {
       number: json['number'] ?? '',
       holderName: json['name'] ?? '',
       expiryDate: json['expiryDate'] ?? '',
-      cvv: json['cvv'],
+      cvv: json['cvv'] ?? '',
       pin: json['pin'],
       syncStatus: json['syncStatus'] ?? 'synced',
     );

@@ -4,6 +4,7 @@ import 'dart:typed_data';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
+import 'package:connectivity_plus/connectivity_plus.dart';
 import '../../encryptItems.dart';
 import '../../keyManager.dart';
 import '../../widgets/custom_input_field.dart';
@@ -18,8 +19,6 @@ class AddLoginPopup extends StatefulWidget {
 }
 
 class _AddLoginPopupState extends State<AddLoginPopup> {
-
-  final userId = FirebaseAuth.instance.currentUser?.uid;
   final TextEditingController nameController = TextEditingController();
   final TextEditingController usernameController = TextEditingController();
   final TextEditingController passwordController = TextEditingController();
@@ -39,7 +38,7 @@ class _AddLoginPopupState extends State<AddLoginPopup> {
 
     setState(() {
       passwordController.text = password;
-      _obscurePassword = true;  // optionally obscure when generated
+      _obscurePassword = true;
     });
   }
 
@@ -50,6 +49,83 @@ class _AddLoginPopupState extends State<AddLoginPopup> {
     passwordController.dispose();
     websiteController.dispose();
     super.dispose();
+  }
+
+  Future<void> _saveLogin() async {
+    if (nameController.text.isEmpty ||
+        usernameController.text.isEmpty ||
+        passwordController.text.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Please fill in all required fields.'),
+          backgroundColor: Colors.red,
+          duration: Duration(seconds: 2),
+        ),
+      );
+      return;
+    }
+
+    final userId = FirebaseAuth.instance.currentUser?.uid;
+    if (userId == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('User not logged in!')),
+      );
+      return;
+    }
+
+    final loginBox = Hive.box<LoginItem>('loginBox');
+    Uint8List? derivedKey = await PBKDF2KeyManager.loadKeyFromLocal();
+
+    if (derivedKey == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Encryption key not found!')),
+      );
+      return;
+    }
+
+    // Save locally in Hive as plaintext
+    final newItem = LoginItem(
+      title: nameController.text,
+      username: usernameController.text,
+      password: passwordController.text,
+      syncStatus: 'new',
+    );
+    final index = await loginBox.add(newItem);
+
+    // Try to sync to Firestore only if online
+    final connectivityResult = await Connectivity().checkConnectivity();
+    if (connectivityResult.first == ConnectivityResult.none) {
+      // Offline: skip Firestore sync, just pop
+      Navigator.of(context).pop();
+      return;
+    }
+
+    try {
+      final encryptedPasswordMap = await encryptAesGcm(derivedKey, passwordController.text);
+      final docRef = await FirebaseFirestore.instance
+          .collection('users')
+          .doc(userId)
+          .collection('logins')
+          .add({
+        'title': newItem.title,
+        'username': newItem.username,
+        'password': encryptedPasswordMap['ciphertext'],
+        'nonce': encryptedPasswordMap['nonce'],
+        'tag': encryptedPasswordMap['tag'],
+      });
+
+      // Save Firestore doc ID in Hive item
+      newItem.firestoreId = docRef.id;
+      newItem.syncStatus = 'synced';
+      await newItem.save();
+    } catch (e) {
+      // Optionally show error, but always pop
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Failed to save to Firestore: $e')),
+      );
+    }
+
+    Navigator.of(context).pop();
   }
 
   @override
@@ -68,13 +144,12 @@ class _AddLoginPopupState extends State<AddLoginPopup> {
       body: SafeArea(
         child: Stack(
           children: [
-            // Positioned background container
             Positioned(
               top: -150,
               left: -100,
               right: -100,
               child: Container(
-                height: 250, // Adjust height as needed
+                height: 250,
                 decoration: const BoxDecoration(
                   borderRadius: BorderRadius.vertical(
                     bottom: Radius.elliptical(300, 100),
@@ -83,7 +158,6 @@ class _AddLoginPopupState extends State<AddLoginPopup> {
                 ),
               ),
             ),
-            // Main content
             Column(
               children: [
                 Expanded(
@@ -124,27 +198,25 @@ class _AddLoginPopupState extends State<AddLoginPopup> {
                 ),
                 Column(
                   children: [
-                    // Transparent button with only border
                     Container(
                       padding: const EdgeInsets.fromLTRB(24, 8, 24, 8),
                       width: double.infinity,
                       child: ElevatedButton(
                         style: ElevatedButton.styleFrom(
-                          backgroundColor: Colors.white, // Transparent background
-                          side: BorderSide(color: const Color(0xFF328E6E), width: 2), // Border with same color as Save button
+                          backgroundColor: Colors.white,
+                          side: BorderSide(color: const Color(0xFF328E6E), width: 2),
                           shape: RoundedRectangleBorder(
                             borderRadius: BorderRadius.circular(12),
                           ),
                           padding: const EdgeInsets.symmetric(vertical: 16),
                         ),
-                          onPressed: _generatePassword,
+                        onPressed: _generatePassword,
                         child: const Text(
                           "Generate Password",
-                          style: TextStyle(fontSize: 16, color: Color(0xFF328E6E)), // Text color same as border
+                          style: TextStyle(fontSize: 16, color: Color(0xFF328E6E)),
                         ),
                       ),
                     ),
-                    // Save button
                     Container(
                       padding: const EdgeInsets.fromLTRB(24, 8, 24, 24),
                       width: double.infinity,
@@ -156,78 +228,7 @@ class _AddLoginPopupState extends State<AddLoginPopup> {
                           ),
                           padding: const EdgeInsets.symmetric(vertical: 16),
                         ),
-                        onPressed: () async {
-                          if (nameController.text.isEmpty ||
-                              usernameController.text.isEmpty ||
-                              passwordController.text.isEmpty) {
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              const SnackBar(
-                                content: Text('Please fill in all required fields.'),
-                                backgroundColor: Colors.red,
-                                duration: Duration(seconds: 2),
-                              ),
-                            );
-                            return;
-                          }
-
-                          final userId = FirebaseAuth.instance.currentUser?.uid;
-                          if (userId == null) {
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              const SnackBar(content: Text('User not logged in!')),
-                            );
-                            return;
-                          }
-
-                          final loginBox = Hive.box<LoginItem>('loginBox');
-
-                          Uint8List? derivedKey = await PBKDF2KeyManager.loadKeyFromLocal();
-
-                          if (derivedKey == null) {
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              const SnackBar(content: Text('Encryption key not found!')),
-                            );
-                            return; // stop execution if key is missing
-                          }
-                          // Encrypt the password before saving to Firestore
-                          final encryptedPasswordMap = await encryptAesGcm(derivedKey, passwordController.text);
-
-                          // Create LoginItem with plaintext for Hive local storage
-                          final newItem = LoginItem(
-                            title: nameController.text,
-                            username: usernameController.text,
-                            password: passwordController.text,
-                            syncStatus: 'new',
-                          );
-
-                          // 1. Save locally in Hive as plaintext (you can encrypt locally if you want too)
-                          final index = await loginBox.add(newItem);
-
-                          try {
-                            // 2. Upload encrypted password to Firestore
-                            final docRef = await FirebaseFirestore.instance
-                                .collection('users')
-                                .doc(userId)
-                                .collection('logins')
-                                .add({
-                              'title': newItem.title,
-                              'username': newItem.username,
-                              // Save the whole encrypted map as a sub-map
-                              'password': encryptedPasswordMap['ciphertext'],
-                              'nonce': encryptedPasswordMap['nonce'],
-                              'tag': encryptedPasswordMap['tag'],
-                            });
-
-                            // 3. Save Firestore doc ID in Hive item (for future update/delete)
-                            newItem.firestoreId = docRef.id;
-                            await newItem.save();
-                          } catch (e) {
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              SnackBar(content: Text('Failed to save to Firestore: $e')),
-                            );
-                          }
-
-                          Navigator.of(context).pop();
-                        },
+                        onPressed: _saveLogin,
                         child: const Text(
                           "Save",
                           style: TextStyle(fontSize: 16, color: Colors.white),

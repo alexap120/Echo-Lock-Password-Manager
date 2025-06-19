@@ -6,7 +6,7 @@ import 'package:flutter/services.dart';
 import 'package:password_manager/models/card_item.dart';
 import 'package:password_manager/screens/main_screens/home.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-
+import 'package:connectivity_plus/connectivity_plus.dart';
 import '../../keyManager.dart';
 import '../../models/login_item.dart';
 import '../../models/notes_item.dart';
@@ -44,6 +44,12 @@ class _EnterPasswordScreenState extends State<EnterPasswordScreen> {
   }
 
   Future<void> _syncItems() async {
+    final connectivityResult = await Connectivity().checkConnectivity();
+    if (connectivityResult.isEmpty || connectivityResult.first == ConnectivityResult.none){
+      // Device is offline, skip sync
+      debugPrint('Offline: skipping sync');
+      return;
+    }
     try {
       // Load key from local storage
       final key = await PBKDF2KeyManager.loadKeyFromLocal();
@@ -133,7 +139,13 @@ class _EnterPasswordScreenState extends State<EnterPasswordScreen> {
         final prefs = await SharedPreferences.getInstance();
         final savedEmail = prefs.getString('remembered_email') ?? '';
 
-        if (savedEmail.isNotEmpty) {
+        bool isOffline = false;
+        final connectivityResult = await Connectivity().checkConnectivity();
+        if (connectivityResult == ConnectivityResult.none) {
+          isOffline = true;
+        }
+
+        if (!isOffline && savedEmail.isNotEmpty) {
           try {
             final querySnapshot = await FirebaseFirestore.instance
                 .collection('users')
@@ -155,16 +167,17 @@ class _EnterPasswordScreenState extends State<EnterPasswordScreen> {
               }
             }
           } catch (e) {
-            // Handle Firestore error if needed
+            // Optionally handle Firestore errors here
           }
         }
 
-        // If phone present and verified or email missing fallback to home
+        // If phone present and verified or email missing or offline, fallback to home
         Navigator.pushReplacement(
           context,
           MaterialPageRoute(builder: (context) => const HomeScreen()),
         );
       }
+
     } on PlatformException catch (e) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text("Biometric Error: ${e.message}")),
@@ -290,28 +303,38 @@ class _EnterPasswordScreenState extends State<EnterPasswordScreen> {
                     } else {
                       // Success: check phone number, then navigate
                       await _syncItems();
-                      try {
-                        final querySnapshot = await FirebaseFirestore.instance
-                            .collection('users')
-                            .where('email', isEqualTo: _savedEmail)
-                            .limit(1)
-                            .get();
 
-                        if (querySnapshot.docs.isNotEmpty) {
-                          final data = querySnapshot.docs.first.data();
-                          final phoneNumber = data['phoneNumber'];
-                          final phoneVerified = data['phoneVerified'] == true;
+                      bool isOffline = false;
+                      final connectivityResult = await Connectivity().checkConnectivity();
+                      if (connectivityResult == ConnectivityResult.none) {
+                        isOffline = true;
+                      }
 
-                          if (phoneNumber == null || !phoneVerified) {
-                            Navigator.pushReplacement(
-                              context,
-                              MaterialPageRoute(builder: (context) => AddPhoneScreen()),
-                            );
-                            return;
+                      if (!isOffline) {
+                        try {
+                          final querySnapshot = await FirebaseFirestore.instance
+                              .collection('users')
+                              .where('email', isEqualTo: _savedEmail)
+                              .limit(1)
+                              .get();
+
+                          if (querySnapshot.docs.isNotEmpty) {
+                            final data = querySnapshot.docs.first.data();
+                            final phoneNumber = data['phoneNumber'];
+                            final phoneVerified = data['phoneVerified'] == true;
+
+                            if (phoneNumber == null || !phoneVerified) {
+                              Navigator.pushReplacement(
+                                context,
+                                MaterialPageRoute(
+                                    builder: (context) => AddPhoneScreen()),
+                              );
+                              return;
+                            }
                           }
+                        } catch (e) {
+                          // Optionally handle Firestore errors here
                         }
-                      } catch (e) {
-                        // Optionally handle Firestore errors here
                       }
 
                       Navigator.pushReplacement(
