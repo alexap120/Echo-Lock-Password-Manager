@@ -264,7 +264,56 @@ class SyncService {
       }
     }
 
-    // 4. Optionally: Download new/updated cards from Firestore and update Hive (not shown here)
+    // 4. Download new/updated cards from Firestore and update Hive
+    final querySnapshot = await cardsCollection.get();
+    final firestoreIds = <String>{};
+    final key = await PBKDF2KeyManager.loadKeyFromLocal();
+    if (key == null) throw Exception('Encryption key not found');
+
+    for (var doc in querySnapshot.docs) {
+      firestoreIds.add(doc.id);
+      final data = doc.data();
+
+      final decryptedNumber = await decryptAesGcm(key, {
+        'ciphertext': data['number'],
+        'nonce': data['number_nonce'],
+        'tag': data['number_tag'],
+      });
+      final decryptedCvv = await decryptAesGcm(key, {
+        'ciphertext': data['cvv'],
+        'nonce': data['cvv_nonce'],
+        'tag': data['cvv_tag'],
+      });
+      final decryptedPin = await decryptAesGcm(key, {
+        'ciphertext': data['pin'],
+        'nonce': data['pin_nonce'],
+        'tag': data['pin_tag'],
+      });
+
+      final existing = cardsBox.values.firstWhereOrNull((item) => item.firestoreId == doc.id);
+
+      if (existing != null) {
+        existing
+          ..number = decryptedNumber
+          ..holderName = data['holderName'] ?? ''
+          ..expiryDate = data['expiryDate'] ?? ''
+          ..cvv = decryptedCvv
+          ..pin = decryptedPin
+          ..syncStatus = 'synced';
+        await existing.save();
+      } else {
+        final cardItem = CardItem(
+          number: decryptedNumber,
+          holderName: data['holderName'] ?? '',
+          expiryDate: data['expiryDate'] ?? '',
+          cvv: decryptedCvv,
+          pin: decryptedPin,
+          firestoreId: doc.id,
+          syncStatus: 'synced',
+        );
+        await cardsBox.add(cardItem);
+      }
+    }
   }
 
 }
