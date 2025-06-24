@@ -50,32 +50,34 @@ class _HomeScreenState extends State<HomeScreen> {
     notesBox = Hive.box<NoteItem>('notesBox');
     cardsBox = Hive.box<CardItem>('cardsBox');
 
+    _loginListener = () => _onBoxChanged();
+    _noteListener = () => _onBoxChanged();
+    _cardListener = () => _onBoxChanged();
+
+    loginBox.listenable().addListener(_loginListener);
+    notesBox.listenable().addListener(_noteListener);
+    cardsBox.listenable().addListener(_cardListener);
+
     _connectivitySubscription = Connectivity().onConnectivityChanged.listen((results) async {
       if (results.any((result) => result != ConnectivityResult.none)) {
         await _syncAll();
       }
     });
-
-    /*_loginListener = () => _onBoxChanged(loginBox);
-    _noteListener = () => _onBoxChanged(notesBox);
-    _cardListener = () => _onBoxChanged(cardsBox);
-
-    loginBox.listenable().addListener(_loginListener);
-    notesBox.listenable().addListener(_noteListener);
-    cardsBox.listenable().addListener(_cardListener);*/
-
   }
 
   Timer? _syncDebounce;
 
-/*  Future<void> _onBoxChanged(Box box) async { TODO: VER NOTAS NO OBSIDIAN!
+  Future<void> _onBoxChanged() async {
     _syncDebounce?.cancel();
     _syncDebounce = Timer(const Duration(milliseconds: 500), () async {
-      if (box.values.any((item) => item.syncStatus == 'deleted')) {
-        //await _syncAll();
+      final hasDeleted = loginBox.values.any((item) => item.syncStatus == 'deleted') ||
+          notesBox.values.any((item) => item.syncStatus == 'deleted') ||
+          cardsBox.values.any((item) => item.syncStatus == 'deleted');
+      if (hasDeleted) {
+        await _syncAll();
       }
     });
-  }*/
+  }
 
 
   Future<void> _syncAll() async {
@@ -210,193 +212,183 @@ class _HomeScreenState extends State<HomeScreen> {
               Expanded(
                 child: ValueListenableBuilder(
                   valueListenable: loginBox.listenable(),
-                  builder: (context, Box<LoginItem> loginBox, _) {
-                    return ValueListenableBuilder(
-                      valueListenable: notesBox.listenable(),
-                      builder: (context, Box<NoteItem> notesBox, _) {
-                        return ValueListenableBuilder(
-                          valueListenable: cardsBox.listenable(),
-                          builder: (context, Box<CardItem> cardsBox, _) {
-                            final allLoginItems = loginBox.values.where((item) => item.syncStatus != 'deleted').toList();
-                            final allNoteItems = notesBox.values.where((item) => item.syncStatus != 'deleted').toList();
-                            final allCardItems = cardsBox.values.where((item) => item.syncStatus != 'deleted').toList();
+                  builder: (context, Box<LoginItem> _, __) {
+                    final allLoginItems = loginBox.values.where((item) => item.syncStatus != 'deleted').toList();
+                    final allNoteItems = notesBox.values.where((item) => item.syncStatus != 'deleted').toList();
+                    final allCardItems = cardsBox.values.where((item) => item.syncStatus != 'deleted').toList();
 
-                            List<dynamic> filteredItems = [];
+                    List<dynamic> filteredItems = [];
 
-                            if (_selectedChip == 'All') {
-                              filteredItems = [
-                                ...allLoginItems.where((item) =>
-                                item.title.toLowerCase().contains(_searchQuery.toLowerCase()) ||
-                                    item.username.toLowerCase().contains(_searchQuery.toLowerCase())
-                                ),
-                                ...allNoteItems.where((item) =>
-                                item.title.toLowerCase().contains(_searchQuery.toLowerCase()) ||
-                                    item.content.toLowerCase().contains(_searchQuery.toLowerCase())
-                                ),
-                                ...allCardItems.where((item) =>
-                                item.number.toLowerCase().contains(_searchQuery.toLowerCase()) ||
-                                    item.holderName.toLowerCase().contains(_searchQuery.toLowerCase())
-                                ),
-                              ];
-                            } else if (_selectedChip == 'Logins') {
-                              filteredItems = allLoginItems.where((item) =>
-                              item.title.toLowerCase().contains(_searchQuery.toLowerCase()) ||
-                                  item.username.toLowerCase().contains(_searchQuery.toLowerCase())
-                              ).toList();
-                            } else if (_selectedChip == 'Notes') {
-                              filteredItems = allNoteItems.where((item) =>
-                              item.title.toLowerCase().contains(_searchQuery.toLowerCase()) ||
-                                  item.content.toLowerCase().contains(_searchQuery.toLowerCase())
-                              ).toList();
-                            } else if (_selectedChip == 'Cards') {
-                              filteredItems = allCardItems.where((item) =>
-                              (item.type.toLowerCase() == 'card') &&
-                                  (item.number.toLowerCase().contains(_searchQuery.toLowerCase()) ||
-                                      item.holderName.toLowerCase().contains(_searchQuery.toLowerCase()))
-                              ).toList();
-                            }
+                    if (_selectedChip == 'All') {
+                      filteredItems = [
+                        ...allLoginItems.where((item) =>
+                        item.title.toLowerCase().contains(_searchQuery.toLowerCase()) ||
+                            item.username.toLowerCase().contains(_searchQuery.toLowerCase())
+                        ),
+                        ...allNoteItems.where((item) =>
+                        item.title.toLowerCase().contains(_searchQuery.toLowerCase()) ||
+                            item.content.toLowerCase().contains(_searchQuery.toLowerCase())
+                        ),
+                        ...allCardItems.where((item) =>
+                        item.number.toLowerCase().contains(_searchQuery.toLowerCase()) ||
+                            item.holderName.toLowerCase().contains(_searchQuery.toLowerCase())
+                        ),
+                      ];
+                    } else if (_selectedChip == 'Logins') {
+                      filteredItems = allLoginItems.where((item) =>
+                      item.title.toLowerCase().contains(_searchQuery.toLowerCase()) ||
+                          item.username.toLowerCase().contains(_searchQuery.toLowerCase())
+                      ).toList();
+                    } else if (_selectedChip == 'Notes') {
+                      filteredItems = allNoteItems.where((item) =>
+                      item.title.toLowerCase().contains(_searchQuery.toLowerCase()) ||
+                          item.content.toLowerCase().contains(_searchQuery.toLowerCase())
+                      ).toList();
+                    } else if (_selectedChip == 'Cards') {
+                      filteredItems = allCardItems.where((item) =>
+                      (item.type.toLowerCase() == 'card') &&
+                          (item.number.toLowerCase().contains(_searchQuery.toLowerCase()) ||
+                              item.holderName.toLowerCase().contains(_searchQuery.toLowerCase()))
+                      ).toList();
+                    }
 
-                            if (filteredItems.isEmpty) {
-                              return Center(
-                                child: Column(
-                                  mainAxisSize: MainAxisSize.min,
-                                  children: [
-                                    Padding(
-                                      padding: const EdgeInsets.only(left: 20),
-                                      child: Image.asset(
-                                        'assets/no_items.png',
-                                        width: 150,
-                                        height: 150,
-                                        color: const Color(0xFF328E6E),
-                                      ),
-                                    ),
-                                    const SizedBox(height: 16),
-                                    Text(
-                                      'There are currently no items\nStart adding some!',
-                                      textAlign: TextAlign.center,
-                                      style: TextStyle(
-                                        fontSize: 18,
-                                        color: Colors.grey[600],
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              );
-                            }
+                    if (filteredItems.isEmpty) {
+                      return Center(
+                        child: Column(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Padding(
+                              padding: const EdgeInsets.only(left: 20),
+                              child: Image.asset(
+                                'assets/no_items.png',
+                                width: 150,
+                                height: 150,
+                                color: const Color(0xFF328E6E),
+                              ),
+                            ),
+                            const SizedBox(height: 16),
+                            Text(
+                              'There are currently no items\nStart adding some!',
+                              textAlign: TextAlign.center,
+                              style: TextStyle(
+                                fontSize: 18,
+                                color: Colors.grey[600],
+                              ),
+                            ),
+                          ],
+                        ),
+                      );
+                    }
 
-                            return ListView.builder(
-                              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                              itemCount: filteredItems.length,
-                              itemBuilder: (context, index) {
-                                final item = filteredItems[index];
-                                if (item is LoginItem) {
-                                  return Card(
-                                    color: Colors.white,
-                                    shape: RoundedRectangleBorder(
-                                        borderRadius: BorderRadius.circular(14)),
-                                    elevation: 1,
-                                    margin: const EdgeInsets.symmetric(vertical: 6),
-                                    child: ListTile(
-                                      onTap: () {
-                                        showModalBottomSheet(
-                                          context: context,
-                                          isScrollControlled: true,
-                                          backgroundColor: Colors.transparent,
-                                          builder: (_) => LoginDetailsBottomSheet(
-                                            loginItem: item,
-                                          ),
-                                        );
-                                      },
-                                      contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                                      title: Text(
-                                        item.title,
-                                        style: const TextStyle(
-                                          fontWeight: FontWeight.bold,
-                                          color: Color(0xFF90C67C),
-                                        ),
-                                      ),
-                                      subtitle: Text(
-                                        item.username,
-                                        style: const TextStyle(color: Colors.grey),
-                                      ),
-                                      trailing: const Icon(Icons.password_outlined, size: 28),
-                                    ),
-                                  );
-                                } else if (item is NoteItem) {
-                                  return Card(
-                                    color: Colors.white,
-                                    shape: RoundedRectangleBorder(
-                                        borderRadius: BorderRadius.circular(14)),
-                                    elevation: 1,
-                                    margin: const EdgeInsets.symmetric(vertical: 6),
-                                    child: ListTile(
-                                      onTap: () {
-                                        showModalBottomSheet(
-                                          context: context,
-                                          isScrollControlled: true,
-                                          backgroundColor: Colors.transparent,
-                                          builder: (_) => NoteDetailsBottomSheet(noteItem: item),
-                                        );
-                                      },
-                                      contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                                      title: Text(
-                                        item.title,
-                                        style: const TextStyle(
-                                          fontWeight: FontWeight.bold,
-                                          color: Color(0xFF90C67C),
-                                        ),
-                                      ),
-                                      subtitle: Text(
-                                        item.content.length > 40
-                                            ? item.content.substring(0, 40) + '...'
-                                            : item.content,
-                                        style: const TextStyle(color: Colors.grey),
-                                      ),
-                                      trailing: const Icon(Icons.sticky_note_2_outlined, size: 28),
-                                    ),
-                                  );
-                                } else if (item is CardItem) {
-                                  return Card(
-                                    color: Colors.white,
-                                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-                                    elevation: 1,
-                                    margin: const EdgeInsets.symmetric(vertical: 6),
-                                    child: ListTile(
-                                      onTap: () {
-                                        showModalBottomSheet(
-                                          context: context,
-                                          isScrollControlled: true,
-                                          backgroundColor: Colors.transparent,
-                                          builder: (_) => CardDetailsBottomSheet(cardItem: item),
-                                        );
-                                      },
-                                      contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                                      title: Text(
-                                        '•••• •••• •••• ${item.number.substring(item.number.length - 4)}',
-                                        style: const TextStyle(
-                                          fontWeight: FontWeight.bold,
-                                          color: Color(0xFF90C67C),
-                                        ),
-                                      ),
-                                      subtitle: Text(
-                                        item.holderName,
-                                        style: const TextStyle(color: Colors.grey),
-                                      ),
-                                      trailing: const Icon(Icons.credit_card, size: 28),
-                                    ),
-                                  );
-                                } else {
-                                  return const SizedBox.shrink();
-                                }
+                    return ListView.builder(
+                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                      itemCount: filteredItems.length,
+                      itemBuilder: (context, index) {
+                        final item = filteredItems[index];
+                        if (item is LoginItem) {
+                          return Card(
+                            color: Colors.white,
+                            shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(14)),
+                            elevation: 1,
+                            margin: const EdgeInsets.symmetric(vertical: 6),
+                            child: ListTile(
+                              onTap: () {
+                                showModalBottomSheet(
+                                  context: context,
+                                  isScrollControlled: true,
+                                  backgroundColor: Colors.transparent,
+                                  builder: (_) => LoginDetailsBottomSheet(
+                                    loginItem: item,
+                                  ),
+                                );
                               },
-                            );
-                          },
-                        );
+                              contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                              title: Text(
+                                item.title,
+                                style: const TextStyle(
+                                  fontWeight: FontWeight.bold,
+                                  color: Color(0xFF90C67C),
+                                ),
+                              ),
+                              subtitle: Text(
+                                item.username,
+                                style: const TextStyle(color: Colors.grey),
+                              ),
+                              trailing: const Icon(Icons.password_outlined, size: 28),
+                            ),
+                          );
+                        } else if (item is NoteItem) {
+                          return Card(
+                            color: Colors.white,
+                            shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(14)),
+                            elevation: 1,
+                            margin: const EdgeInsets.symmetric(vertical: 6),
+                            child: ListTile(
+                              onTap: () {
+                                showModalBottomSheet(
+                                  context: context,
+                                  isScrollControlled: true,
+                                  backgroundColor: Colors.transparent,
+                                  builder: (_) => NoteDetailsBottomSheet(noteItem: item),
+                                );
+                              },
+                              contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                              title: Text(
+                                item.title,
+                                style: const TextStyle(
+                                  fontWeight: FontWeight.bold,
+                                  color: Color(0xFF90C67C),
+                                ),
+                              ),
+                              subtitle: Text(
+                                item.content.length > 40
+                                    ? item.content.substring(0, 40) + '...'
+                                    : item.content,
+                                style: const TextStyle(color: Colors.grey),
+                              ),
+                              trailing: const Icon(Icons.sticky_note_2_outlined, size: 28),
+                            ),
+                          );
+                        } else if (item is CardItem) {
+                          return Card(
+                            color: Colors.white,
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                            elevation: 1,
+                            margin: const EdgeInsets.symmetric(vertical: 6),
+                            child: ListTile(
+                              onTap: () {
+                                showModalBottomSheet(
+                                  context: context,
+                                  isScrollControlled: true,
+                                  backgroundColor: Colors.transparent,
+                                  builder: (_) => CardDetailsBottomSheet(cardItem: item),
+                                );
+                              },
+                              contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                              title: Text(
+                                '•••• •••• •••• ${item.number.substring(item.number.length - 4)}',
+                                style: const TextStyle(
+                                  fontWeight: FontWeight.bold,
+                                  color: Color(0xFF90C67C),
+                                ),
+                              ),
+                              subtitle: Text(
+                                item.holderName,
+                                style: const TextStyle(color: Colors.grey),
+                              ),
+                              trailing: const Icon(Icons.credit_card, size: 28),
+                            ),
+                          );
+                        } else {
+                          return const SizedBox.shrink();
+                        }
                       },
                     );
                   },
                 ),
-              ),
+              )
             ],
           ),
         ],
