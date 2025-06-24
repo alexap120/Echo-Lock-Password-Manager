@@ -76,6 +76,7 @@ class _HomeScreenState extends State<HomeScreen> {
       if (hasDeleted) {
         await _syncAll();
       }
+      if (mounted) setState(() {});
     });
   }
 
