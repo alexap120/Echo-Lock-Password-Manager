@@ -88,6 +88,7 @@ class _HomeScreenState extends State<HomeScreen> {
     await syncService.syncLoginItems(userId);
     await syncService.syncNoteItems(notesBox, userId);
     await syncService.syncCardItems(cardsBox, userId);
+    if (mounted) setState(() {});
   }
 
   @override
