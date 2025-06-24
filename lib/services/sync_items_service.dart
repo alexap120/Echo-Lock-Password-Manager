@@ -314,6 +314,13 @@ class SyncService {
         await cardsBox.add(cardItem);
       }
     }
+    // 5. Remove from Hive any item with firestoreId not in Firestore
+    final toDeleteLocal = cardsBox.values
+        .where((item) => item.firestoreId != null && !firestoreIds.contains(item.firestoreId))
+        .toList();
+    for (var item in toDeleteLocal) {
+      await item.delete();
+    }
   }
 
 }
