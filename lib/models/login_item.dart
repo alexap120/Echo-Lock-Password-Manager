@@ -19,12 +19,16 @@ class LoginItem extends HiveObject {
   @HiveField(4)
   String syncStatus;
 
+  @HiveField(5)
+  String passwordFingerprint;
+
   LoginItem({
     required this.title,
     required this.username,
     required this.password,
     this.firestoreId,
     this.syncStatus = 'new', // Default to 'new'
+    required this.passwordFingerprint,
   });
 
   String get type => 'Login';
@@ -35,6 +39,7 @@ class LoginItem extends HiveObject {
       'username': username,
       'password': password,
       'syncStatus': syncStatus,
+      'passwordFingerprint': passwordFingerprint,
     };
   }
 
@@ -44,6 +49,7 @@ class LoginItem extends HiveObject {
       username: json['username'] ?? '',
       password: json['password'] ?? '',
       syncStatus: json['syncStatus'] ?? 'synced',
+      passwordFingerprint: json['passwordFingerprint'] ?? '',
     );
   }
 }

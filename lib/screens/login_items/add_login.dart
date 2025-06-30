@@ -1,7 +1,9 @@
+import 'dart:convert';
 import 'dart:math';
 import 'dart:typed_data';
 
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:crypto/crypto.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:connectivity_plus/connectivity_plus.dart';
@@ -83,11 +85,13 @@ class _AddLoginPopupState extends State<AddLoginPopup> {
       return;
     }
 
+    String fingerprint = sha256.convert(utf8.encode(passwordController.text)).toString();
     // Save locally in Hive as plaintext
     final newItem = LoginItem(
       title: nameController.text,
       username: usernameController.text,
       password: passwordController.text,
+      passwordFingerprint: fingerprint,
       syncStatus: 'new',
     );
     final index = await loginBox.add(newItem);

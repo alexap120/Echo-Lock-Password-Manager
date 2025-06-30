@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_speed_dial/flutter_speed_dial.dart';
+import 'package:hive/hive.dart';
 import 'package:password_manager/screens/profile/profile_page.dart';
 
+import '../../models/login_item.dart';
 import '../../widgets/custom_bottom_nav_bar.dart';
 import '../login_items/add_card.dart';
 import '../login_items/add_login.dart';
@@ -17,6 +19,15 @@ class DashboardScreen extends StatefulWidget {
 class _DashboardScreenState extends State<DashboardScreen> {
   int _selectedIndex = 1;
   dynamic _profileImage;
+  final loginBox = Hive.box<LoginItem>('loginBox');
+  int reusedCount = 0;
+
+  @override
+  void initState() {
+    super.initState();
+    reusedCount = countReusedPasswords(loginBox.values);
+    reusedLogins = getReusedLoginItems(loginBox.values);
+  }
 
   void _onTabTapped(int index) {
     setState(() {
@@ -34,10 +45,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
     {'title': 'Yahoo', 'email': 'comp1@email.com'},
   ];
 
-  final List<Map<String, String>> reusedLogins = [
-    {'title': 'Reddit', 'email': 'reuse@email.com'},
-    {'title': 'Twitter', 'email': 'reuse2@email.com'},
-  ];
+  List<LoginItem> reusedLogins = [];
 
   @override
   Widget build(BuildContext context) {
@@ -59,24 +67,24 @@ class _DashboardScreenState extends State<DashboardScreen> {
           Padding(
             padding: const EdgeInsets.only(right: 16.0),
             child: GestureDetector(
-              onTap: () {
-                showModalBottomSheet(
-                  context: context,
-                  isScrollControlled: true,
-                  backgroundColor: Colors.transparent,
-                  builder: (context) => ProfilePopup(),
-                );
-              },
-              child: CircleAvatar(
-                radius: 20,
-                backgroundColor: Colors.grey[300],
-                backgroundImage: _profileImage != null
-                    ? FileImage(_profileImage!) // User-selected image
-                    : null, // Default image
-                child: _profileImage == null
-                    ? Icon(Icons.person, size: 30, color: Colors.grey[600])
-                    : null,
-              )
+                onTap: () {
+                  showModalBottomSheet(
+                    context: context,
+                    isScrollControlled: true,
+                    backgroundColor: Colors.transparent,
+                    builder: (context) => ProfilePopup(),
+                  );
+                },
+                child: CircleAvatar(
+                  radius: 20,
+                  backgroundColor: Colors.grey[300],
+                  backgroundImage: _profileImage != null
+                      ? FileImage(_profileImage!) // User-selected image
+                      : null, // Default image
+                  child: _profileImage == null
+                      ? Icon(Icons.person, size: 30, color: Colors.grey[600])
+                      : null,
+                )
             ),
           ),
         ],
@@ -125,10 +133,16 @@ class _DashboardScreenState extends State<DashboardScreen> {
                   physics: const NeverScrollableScrollPhysics(),
                   childAspectRatio: 1.8,
                   children: [
-                    _buildHealthCard(Icons.key, '42', 'Total', Colors.blue),
-                    _buildHealthCard(Icons.warning_amber_rounded, '8', 'Weak', Colors.orange),
-                    _buildHealthCard(Icons.error_outline, '3', 'Compromised', Colors.red),
-                    _buildHealthCard(Icons.refresh, '5', 'Reused', Colors.orange),
+                    _buildHealthCard(Icons.key, '${loginBox.values
+                        .where((item) => item.syncStatus != 'deleted')
+                        .length}', 'Total', Colors.blue),
+                    _buildHealthCard(
+                        Icons.warning_amber_rounded, 'NULL', 'Weak',
+                        Colors.orange),
+                    _buildHealthCard(
+                        Icons.error_outline, 'NULL', 'Compromised', Colors.red),
+                    _buildHealthCard(
+                        Icons.refresh, '$reusedCount', 'Reused', Colors.orange),
                   ],
                 ),
               ),
@@ -146,7 +160,8 @@ class _DashboardScreenState extends State<DashboardScreen> {
                         if (weakLogins.isNotEmpty) ...[
                           Row(
                             children: const [
-                              Icon(Icons.warning_amber_rounded, color: Colors.orange),
+                              Icon(Icons.warning_amber_rounded,
+                                  color: Colors.orange),
                               SizedBox(width: 8),
                               Text(
                                 'Weak',
@@ -159,7 +174,9 @@ class _DashboardScreenState extends State<DashboardScreen> {
                             ],
                           ),
                           const SizedBox(height: 8),
-                          ...weakLogins.map((item) => _buildLoginTile(item['title']!, item['email']!, Icons.warning_amber_rounded)),
+                          ...weakLogins.map((item) =>
+                              _buildLoginTile(item['title']!, item['email']!,
+                                  Icons.warning_amber_rounded)),
                           const SizedBox(height: 16),
                         ],
                         if (compromisedLogins.isNotEmpty) ...[
@@ -178,7 +195,9 @@ class _DashboardScreenState extends State<DashboardScreen> {
                             ],
                           ),
                           const SizedBox(height: 8),
-                          ...compromisedLogins.map((item) => _buildLoginTile(item['title']!, item['email']!, Icons.error_outline)),
+                          ...compromisedLogins.map((item) =>
+                              _buildLoginTile(item['title']!, item['email']!,
+                                  Icons.error_outline)),
                           const SizedBox(height: 16),
                         ],
                         if (reusedLogins.isNotEmpty) ...[
@@ -197,7 +216,8 @@ class _DashboardScreenState extends State<DashboardScreen> {
                             ],
                           ),
                           const SizedBox(height: 8),
-                          ...reusedLogins.map((item) => _buildLoginTile(item['title']!, item['email']!, Icons.refresh)),
+                          ...reusedLogins.map((item) =>
+                              _buildLoginTile(item.title, item.username, Icons.refresh)),
                           const SizedBox(height: 100),
                         ],
                       ],
@@ -279,7 +299,8 @@ class _DashboardScreenState extends State<DashboardScreen> {
     );
   }
 
-  Widget _buildHealthCard(IconData icon, String number, String label, Color iconColor) {
+  Widget _buildHealthCard(IconData icon, String number, String label,
+      Color iconColor) {
     return Container(
       decoration: BoxDecoration(
         color: Colors.white,
@@ -353,4 +374,35 @@ class _DashboardScreenState extends State<DashboardScreen> {
       ),
     );
   }
+
+  int countReusedPasswords(Iterable<LoginItem> items) {
+    final Map<String, int> fingerprintCounts = {};
+
+    for (var item in items) {
+      final fp = item.passwordFingerprint;
+      fingerprintCounts[fp] = (fingerprintCounts[fp] ?? 0) + 1;
+    }
+
+    // Count how many fingerprints appear more than once
+    final reused = fingerprintCounts.values
+        .where((count) => count > 1)
+        .length;
+
+    return reused;
+  }
+
+  List<LoginItem> getReusedLoginItems(Iterable<LoginItem> items) {
+    final Map<String, List<LoginItem>> grouped = {};
+
+    for (var item in items) {
+      final fp = item.passwordFingerprint;
+      grouped.putIfAbsent(fp, () => []).add(item);
+    }
+
+    return grouped.values
+        .where((list) => list.length > 1)
+        .expand((list) => list)
+        .toList();
+  }
+
 }
