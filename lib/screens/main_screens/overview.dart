@@ -1,9 +1,16 @@
+import 'dart:convert';
+
+import 'package:crypto/crypto.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_speed_dial/flutter_speed_dial.dart';
 import 'package:hive/hive.dart';
+import 'package:hive_flutter/adapters.dart';
+import 'package:http/http.dart' as http;
 import 'package:password_manager/screens/profile/profile_page.dart';
 
 import '../../models/login_item.dart';
+import '../../services/password_breach_service.dart';
+import '../../services/password_strength_util.dart';
 import '../../widgets/custom_bottom_nav_bar.dart';
 import '../login_items/add_card.dart';
 import '../login_items/add_login.dart';
@@ -21,10 +28,29 @@ class _DashboardScreenState extends State<DashboardScreen> {
   dynamic _profileImage;
   final loginBox = Hive.box<LoginItem>('loginBox');
   int reusedCount = 0;
+  int compromisedCount = 0;
+  int weakCount = 0;
 
   @override
   void initState() {
     super.initState();
+    updateReused();
+    updateCompromisedCount();
+    updateWeak();
+    loginBox.listenable().addListener(() {
+      setState(() {
+        updateReused();
+        updateWeak();
+      });
+    });
+  }
+
+  void updateWeak() {
+    weakCount = countWeakPasswords(loginBox.values);
+    weakLogins = getWeakLoginItems(loginBox.values);
+  }
+
+  void updateReused() {
     reusedCount = countReusedPasswords(loginBox.values);
     reusedLogins = getReusedLoginItems(loginBox.values);
   }
@@ -35,17 +61,9 @@ class _DashboardScreenState extends State<DashboardScreen> {
     });
   }
 
-  // Dummy data
-  final List<Map<String, String>> weakLogins = [
-    {'title': 'Facebook', 'email': 'weak1@email.com'},
-    {'title': 'Instagram', 'email': 'weak2@email.com'},
-  ];
-
-  final List<Map<String, String>> compromisedLogins = [
-    {'title': 'Yahoo', 'email': 'comp1@email.com'},
-  ];
-
   List<LoginItem> reusedLogins = [];
+  List<LoginItem> compromisedLogins = [];
+  List<LoginItem> weakLogins = [];
 
   @override
   Widget build(BuildContext context) {
@@ -137,10 +155,10 @@ class _DashboardScreenState extends State<DashboardScreen> {
                         .where((item) => item.syncStatus != 'deleted')
                         .length}', 'Total', Colors.blue),
                     _buildHealthCard(
-                        Icons.warning_amber_rounded, 'NULL', 'Weak',
+                        Icons.warning_amber_rounded, '$weakCount', 'Weak',
                         Colors.orange),
                     _buildHealthCard(
-                        Icons.error_outline, 'NULL', 'Compromised', Colors.red),
+                        Icons.error_outline, '$compromisedCount', 'Compromised', Colors.red),
                     _buildHealthCard(
                         Icons.refresh, '$reusedCount', 'Reused', Colors.orange),
                   ],
@@ -175,7 +193,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                           ),
                           const SizedBox(height: 8),
                           ...weakLogins.map((item) =>
-                              _buildLoginTile(item['title']!, item['email']!,
+                              _buildLoginTile(item.title, item.username,
                                   Icons.warning_amber_rounded)),
                           const SizedBox(height: 16),
                         ],
@@ -196,8 +214,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                           ),
                           const SizedBox(height: 8),
                           ...compromisedLogins.map((item) =>
-                              _buildLoginTile(item['title']!, item['email']!,
-                                  Icons.error_outline)),
+                              _buildLoginTile(item.title, item.username, Icons.error_outline)),
                           const SizedBox(height: 16),
                         ],
                         if (reusedLogins.isNotEmpty) ...[
@@ -403,6 +420,40 @@ class _DashboardScreenState extends State<DashboardScreen> {
         .where((list) => list.length > 1)
         .expand((list) => list)
         .toList();
+  }
+
+  Future<void> updateCompromisedCount() async {
+    final service = PasswordBreachService();
+    int count = 0;
+    List<LoginItem> compromised = [];
+    for (final item in loginBox.values) {
+      if (item.password.isNotEmpty) {
+        final breached = await service.checkPassword(item.password);
+        if (breached > 0) {
+          count++;
+          compromised.add(item);
+        }
+      }
+    }
+    setState(() {
+      compromisedCount = count;
+      compromisedLogins = compromised;
+    });
+  }
+
+  int countWeakPasswords(Iterable<LoginItem> items) {
+    int count = 0;
+    for (var item in items) {
+      final result = evaluatePasswordStrength(item.password);
+      if (result['label'] == 'Poor password strength') count++;
+    }
+    return count;
+  }
+
+  List<LoginItem> getWeakLoginItems(Iterable<LoginItem> items) {
+    return items.where((item) =>
+    evaluatePasswordStrength(item.password)['label'] == 'Poor password strength'
+    ).toList();
   }
 
 }

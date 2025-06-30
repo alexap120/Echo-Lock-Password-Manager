@@ -4,6 +4,7 @@ import 'package:flutter/services.dart';
 import 'package:password_manager/screens/profile/profile_page.dart';
 import '../../models/password_generator_util.dart';
 import '../../services/password_breach_service.dart';
+import '../../services/password_strength_util.dart';
 import '../../widgets/breach_warning.dart';
 import '../../widgets/custom_bottom_nav_bar.dart';
 
@@ -32,44 +33,8 @@ class _PasswordGeneratorWidgetState extends State<PasswordGeneratorWidget> {
   int _selectedIndex = 3;
 
 
-  Map<String, dynamic> _evaluatePasswordStrength(String password) {
-    if (password == "Select at least one option" || password == "Generate password") {
-      return {"label": "No options selected", "color": Colors.grey[400]};
-    }
-
-    int score = 0;
-
-    // Length-based scoring
-    if (password.length >= 25) {
-      score += 3;
-    } else if (password.length >= 17) {
-      score += 2;
-    } else if (password.length >= 12) {
-      score += 1;
-    }
-
-    // Character variety scoring
-    if (RegExp(r'[A-Z]').hasMatch(password)) score++;
-    if (RegExp(r'[a-z]').hasMatch(password)) score++;
-    if (RegExp(r'\d').hasMatch(password)) score++;
-    if (RegExp(r'[!@#%^&*\$#()\-_+=\[{\]}\\|;:,<.>/?~]').hasMatch(password)) score++;
-
-    // Total score is now between 0 and 7
-    if (score <= 2) {
-      return {"label": "Poor password strength", "color": Colors.red[400]};
-    } else if (score <= 4) {
-      return {"label": "Medium password strength", "color": Colors.orange[400]};
-    } else if (score <= 6) {
-      return {"label": "Good password strength", "color": Colors.green[400]};
-    } else {
-      return {"label": "Excellent password strength", "color": Colors.green[700]};
-    }
-  }
-
-
-
   Widget _buildPasswordStrengthIndicator(String password) {
-    final result = _evaluatePasswordStrength(password);
+    final result = evaluatePasswordStrength(password);
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.all(12),
