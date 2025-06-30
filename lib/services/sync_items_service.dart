@@ -1,4 +1,7 @@
+import 'dart:convert';
+
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:crypto/crypto.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:hive/hive.dart';
 import 'package:collection/collection.dart';
@@ -56,6 +59,7 @@ class SyncService {
           'tag': data['tag'] as String,
         };
         final decryptedPassword = await decryptAesGcm(key, encryptedPassword);
+        String fingerprint = sha256.convert(utf8.encode(decryptedPassword)).toString();
 
         final existing = hiveBox.values.firstWhereOrNull(
               (item) => item.firestoreId == doc.id,
@@ -75,6 +79,7 @@ class SyncService {
             password: decryptedPassword,
             firestoreId: doc.id,
             syncStatus: 'synced',
+            passwordFingerprint: fingerprint,
           );
           await hiveBox.add(loginItem);
         }

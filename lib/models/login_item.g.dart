@@ -22,13 +22,14 @@ class LoginItemAdapter extends TypeAdapter<LoginItem> {
       password: fields[2] as String,
       firestoreId: fields[3] as String?,
       syncStatus: fields[4] as String,
+      passwordFingerprint: fields[5] as String,
     );
   }
 
   @override
   void write(BinaryWriter writer, LoginItem obj) {
     writer
-      ..writeByte(5)
+      ..writeByte(6)
       ..writeByte(0)
       ..write(obj.title)
       ..writeByte(1)
@@ -38,7 +39,9 @@ class LoginItemAdapter extends TypeAdapter<LoginItem> {
       ..writeByte(3)
       ..write(obj.firestoreId)
       ..writeByte(4)
-      ..write(obj.syncStatus);
+      ..write(obj.syncStatus)
+      ..writeByte(5)
+      ..write(obj.passwordFingerprint);
   }
 
   @override
