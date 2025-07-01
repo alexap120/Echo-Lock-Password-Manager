@@ -1,10 +1,20 @@
+import 'dart:convert';
+import 'dart:io';
+
+import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
+import 'package:hive/hive.dart';
 import 'package:password_manager/screens/profile/profile_page.dart';
 import 'package:password_manager/screens/settings/update_password.dart';
 import 'package:password_manager/widgets/custom_bottom_nav_bar.dart';
 import 'package:local_auth/local_auth.dart';
+import 'package:path_provider/path_provider.dart';
+import 'package:share_plus/share_plus.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+import '../../models/card_item.dart';
+import '../../models/login_item.dart';
+import '../../models/notes_item.dart';
 import 'delete_account.dart';
 
 // The main Settings Screen Widget
@@ -20,6 +30,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
   int _selectedIndex = 4;
   int _autoLockMinutes = 1;
   dynamic _profileImage;
+  bool _isInstantLockEnabled = false;
 
   void _onTabTapped(int index) {
     setState(() => _selectedIndex = index);
@@ -30,6 +41,34 @@ class _SettingsScreenState extends State<SettingsScreen> {
   void initState() {
     super.initState();
     _loadBiometricPreference();
+    _loadAutoLockMinutes();
+    _loadInstantLockPreference();
+  }
+
+  Future<void> _loadInstantLockPreference() async {
+    final prefs = await SharedPreferences.getInstance();
+    setState(() {
+      _isInstantLockEnabled = prefs.getBool('instant_lock_enabled') ?? false;
+    });
+  }
+
+  Future<void> _updateInstantLockPreference(bool enabled) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setBool('instant_lock_enabled', enabled);
+    setState(() => _isInstantLockEnabled = enabled);
+  }
+
+  Future<void> _loadAutoLockMinutes() async {
+    final prefs = await SharedPreferences.getInstance();
+    setState(() {
+      _autoLockMinutes = prefs.getInt('auto_lock_minutes') ?? 1;
+    });
+  }
+
+  Future<void> _setAutoLockMinutes(int minutes) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setInt('auto_lock_minutes', minutes);
+    setState(() => _autoLockMinutes = minutes);
   }
 
 
@@ -121,13 +160,12 @@ class _SettingsScreenState extends State<SettingsScreen> {
       leading: _autoLockMinutes == minutes
           ? const Icon(Icons.check_circle, color: Color(0xFF328E6E))
           : const Icon(Icons.circle_outlined, color: Colors.grey),
-      onTap: () {
-        setState(() => _autoLockMinutes = minutes);
+      onTap: () async {
+        await _setAutoLockMinutes(minutes);
         Navigator.of(context).pop();
       },
     );
   }
-
 
   @override
   Widget build(BuildContext context) {
@@ -289,6 +327,27 @@ class _SettingsScreenState extends State<SettingsScreen> {
             titleColor: Color(0xFF67AE6E),
           ),
 
+          // In the build method, after the Auto-Lock Timer card:
+
+          _buildSettingsCard(
+            context: context,
+            title: 'Instant Lock on App Switch',
+            subtitle: 'Locks instantly when you leave the app',
+            trailing: Switch(
+              value: _isInstantLockEnabled,
+              onChanged: (bool value) {
+                _updateInstantLockPreference(value);
+
+              },
+              activeColor: Color(0xFF328E6E),
+            ),
+            onTap: () {
+              _updateInstantLockPreference(!_isInstantLockEnabled);
+            },
+            titleColor: Color(0xFF67AE6E),
+          ),
+
+
           // Data Section Header
           _buildSectionHeader('Data'),
 
@@ -298,10 +357,16 @@ class _SettingsScreenState extends State<SettingsScreen> {
             title: 'Export Vault',
             subtitle: 'Download encrypted backup',
             trailing: Icon(Icons.download_outlined, color: Colors.grey[600]),
-            onTap: () {
-              // Perform export action
-              print('Export Vault tapped');
-            },
+            onTap: () => _exportVault(context),
+            titleColor: Color(0xFF67AE6E),
+          ),
+
+          _buildSettingsCard(
+            context: context,
+            title: 'Import Vault',
+            subtitle: 'Restore from backup file',
+            trailing: Icon(Icons.upload_outlined, color: Colors.grey[600]),
+            onTap: () => _importVault(context),
             titleColor: Color(0xFF67AE6E),
           ),
 
@@ -399,3 +464,131 @@ class _SettingsScreenState extends State<SettingsScreen> {
   }
 }
 
+
+
+Future<void> _exportVault(BuildContext context) async {
+  final auth = LocalAuthentication();
+  bool authenticated = false;
+
+  try {
+    authenticated = await auth.authenticate(
+      localizedReason: 'Authenticate to export your vault',
+      options: const AuthenticationOptions(
+        biometricOnly: true,
+        stickyAuth: true,
+      ),
+    );
+  } catch (e) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text('Authentication error: $e')),
+    );
+    return;
+  }
+
+  if (!authenticated) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text('Authentication failed')),
+    );
+    return;
+  }
+
+  final loginBox = Hive.box<LoginItem>('loginBox');
+  final notesBox = Hive.box<NoteItem>('notesBox');
+  final cardsBox = Hive.box<CardItem>('cardsBox');
+
+  final data = {
+    'logins': loginBox.values.map((e) => e.toJson()).toList(),
+    'notes': notesBox.values.map((e) => e.toJson()).toList(),
+    'cards': cardsBox.values.map((e) => e.toJson()).toList(),
+  };
+
+  final jsonString = const JsonEncoder.withIndent('  ').convert(data);
+
+  try {
+    final directory = await getTemporaryDirectory();
+    final file = File('${directory.path}/vault_export.json');
+    await file.writeAsString(jsonString);
+
+    final shareParams = ShareParams(
+      text: 'Here is my vault export.',
+      subject: 'Vault Export',
+      files: [XFile(file.path)],
+    );
+
+    final result = await SharePlus.instance.share(shareParams);
+
+    if (result.status == ShareResultStatus.success) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Vault export shared successfully!')),
+      );
+    } else if (result.status == ShareResultStatus.dismissed) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Share dismissed.')),
+      );
+    } else {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Share unavailable.')),
+      );
+    }
+  } catch (e) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text('Failed to export vault: $e')),
+    );
+  }
+}
+
+
+
+Future<void> _importVault(BuildContext context) async {
+  try {
+    FilePickerResult? result = await FilePicker.platform.pickFiles(
+      type: FileType.custom,
+      allowedExtensions: ['json'],
+    );
+    if (result == null || result.files.single.path == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('No file selected.')),
+      );
+      return;
+    }
+
+    final file = File(result.files.single.path!);
+    final jsonString = await file.readAsString();
+    final data = jsonDecode(jsonString);
+
+    final loginBox = Hive.box<LoginItem>('loginBox');
+    final notesBox = Hive.box<NoteItem>('notesBox');
+    final cardsBox = Hive.box<CardItem>('cardsBox');
+
+    if (data['logins'] is List) {
+      for (var item in data['logins']) {
+        final login = LoginItem.fromJson(item);
+        login.syncStatus = 'new';
+        loginBox.add(login);
+      }
+    }
+    if (data['notes'] is List) {
+      for (var item in data['notes']) {
+        final note = NoteItem.fromJson(item);
+        note.syncStatus = 'new';
+        notesBox.add(note);
+      }
+    }
+    if (data['cards'] is List) {
+      for (var item in data['cards']) {
+        final card = CardItem.fromJson(item);
+        card.syncStatus = 'new';
+        cardsBox.add(card);
+      }
+    }
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text('Vault imported successfully!')),
+    );
+  } catch (e) {
+    if (!context.mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text('Failed to import vault: $e')),
+    );
+  }
+}

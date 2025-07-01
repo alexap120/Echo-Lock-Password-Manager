@@ -38,10 +38,12 @@ class _DashboardScreenState extends State<DashboardScreen> {
     updateCompromisedCount();
     updateWeak();
     loginBox.listenable().addListener(() {
-      setState(() {
-        updateReused();
-        updateWeak();
-      });
+      if (mounted) {
+        setState(() {
+          updateReused();
+          updateWeak();
+        });
+      }
     });
   }
 
