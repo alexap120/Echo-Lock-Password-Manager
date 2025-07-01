@@ -101,7 +101,7 @@ class SyncService {
     try {
       final notesCollection = firestore
           .collection('users')
-          .doc(userId)
+          .doc(FirebaseAuth.instance.currentUser?.uid)
           .collection('notes');
 
       Uint8List? key = await PBKDF2KeyManager.loadKeyFromLocal();
@@ -202,7 +202,7 @@ class SyncService {
 
   Future<void> syncCardItems(Box<CardItem> cardsBox, String userId) async {
     final firestore = FirebaseFirestore.instance;
-    final cardsCollection = firestore.collection('users').doc(userId).collection('cards');
+    final cardsCollection = firestore.collection('users').doc(FirebaseAuth.instance.currentUser?.uid).collection('cards');
 
     // 1. Delete cards marked as 'deleted'
     final toDelete = cardsBox.values.where((item) => item.syncStatus == 'deleted').toList();

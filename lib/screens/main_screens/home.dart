@@ -11,11 +11,13 @@ import 'package:password_manager/models/card_item.dart';
 import 'package:password_manager/screens/login_items/add_card.dart';
 import 'package:password_manager/screens/login_items/add_note.dart';
 import 'package:password_manager/screens/profile/profile_page.dart';
+import 'package:password_manager/services/auto_lock_manager.dart';
 
 import '../../models/login_item.dart';
 import '../../models/notes_item.dart';
 import '../../services/sync_items_service.dart';
 import '../../widgets/custom_bottom_nav_bar.dart';
+import '../auth/login_password.dart';
 import '../login_items/add_login.dart';
 import '../login_items/card_item_details.dart';
 import '../login_items/login_item_details.dart';
@@ -42,10 +44,14 @@ class _HomeScreenState extends State<HomeScreen> {
   late final VoidCallback _loginListener;
   late final VoidCallback _noteListener;
   late final VoidCallback _cardListener;
+  late AutoLockManager autoLockManager;
 
   @override
   void initState() {
     super.initState();
+    autoLockManager = AutoLockManager(onTimeout: _logoutUser);
+    autoLockManager.loadSetting().then((_) => autoLockManager.start());
+    WidgetsBinding.instance.addObserver(autoLockManager);
     loginBox = Hive.box<LoginItem>('loginBox');
     notesBox = Hive.box<NoteItem>('notesBox');
     cardsBox = Hive.box<CardItem>('cardsBox');
@@ -100,6 +106,8 @@ class _HomeScreenState extends State<HomeScreen> {
     notesBox.listenable().removeListener(_noteListener);
     cardsBox.listenable().removeListener(_cardListener);
     _searchController.dispose();
+    autoLockManager.stopTimer();
+    WidgetsBinding.instance.removeObserver(autoLockManager);
     super.dispose();
   }
 
@@ -454,6 +462,15 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
+  void _logoutUser() {
+    if (mounted) {
+      Navigator.of(context).pushAndRemoveUntil(
+        MaterialPageRoute(builder: (context) => const EnterPasswordScreen()),
+            (route) => false,
+      );
+    }
+  }
+
   Widget _buildChip(String label) {
     final bool selected = _selectedChip == label;
     return FilterChip(
@@ -471,3 +488,4 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 }
+
