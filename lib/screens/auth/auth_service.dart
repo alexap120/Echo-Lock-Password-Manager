@@ -28,6 +28,8 @@ class AuthService {
         'createdAt': FieldValue.serverTimestamp(),
         'phoneNumber': '',
         'phoneVerified': false,
+        'two_fa_enabled': false,
+        'totp_secret': '',
       });
 
       await user.sendEmailVerification();

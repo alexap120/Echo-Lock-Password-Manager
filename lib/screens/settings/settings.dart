@@ -1,7 +1,10 @@
 import 'dart:convert';
 import 'dart:io';
 
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:connectivity_plus/connectivity_plus.dart';
 import 'package:file_picker/file_picker.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:hive/hive.dart';
 import 'package:password_manager/screens/profile/profile_page.dart';
@@ -32,6 +35,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
   int _autoLockMinutes = 1;
   dynamic _profileImage;
   bool _isInstantLockEnabled = false;
+  bool is2FAEnabled = false;
 
   void _onTabTapped(int index) {
     setState(() => _selectedIndex = index);
@@ -44,6 +48,27 @@ class _SettingsScreenState extends State<SettingsScreen> {
     _loadBiometricPreference();
     _loadAutoLockMinutes();
     _loadInstantLockPreference();
+    load2FAStatus();
+  }
+
+  Future<void> load2FAStatus() async {
+    final prefs = await SharedPreferences.getInstance();
+    final connectivity = await Connectivity().checkConnectivity();
+
+    if (connectivity != ConnectivityResult.none) {
+      // Online: fetch from Firestore and cache
+      final user = FirebaseAuth.instance.currentUser;
+      if (user != null) {
+        final doc = await FirebaseFirestore.instance.collection('users').doc(user.uid).get();
+        final enabled = doc.data()?['two_fa_enabled'] == true;
+        await prefs.setBool('two_fa_enabled', enabled);
+        setState(() => is2FAEnabled = enabled);
+      }
+    } else {
+      // Offline: read from cache
+      final enabled = prefs.getBool('two_fa_enabled') ?? false;
+      setState(() => is2FAEnabled = enabled);
+    }
   }
 
   Future<void> _loadInstantLockPreference() async {
@@ -311,16 +336,27 @@ class _SettingsScreenState extends State<SettingsScreen> {
             context: context,
             title: '2-Step Verification',
             subtitle: 'Setup Two-Factor Authentication',
-            trailing: const Icon(Icons.close, color: Colors.red),
-            onTap: () {
+            trailing: Icon(
+              is2FAEnabled ? Icons.check : Icons.close,
+              color: is2FAEnabled ? Colors.green : Colors.red,
+            ),
+            onTap: () async {
+              final prefs = await SharedPreferences.getInstance();
+              final is2FAEnabled = prefs.getBool('two_fa_enabled') ?? false;
+
+              if (is2FAEnabled) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(content: Text('2FA is already enabled.')),
+                );
+                return; // Block navigation
+              }
+
               Navigator.push(
                 context,
-                MaterialPageRoute(
-                  builder: (_) => const TwoFactorSetupScreen(),
-                ),
+                MaterialPageRoute(builder: (context) => const TwoFactorSetupScreen()),
               );
             },
-            titleColor: Color(0xFF67AE6E),
+            titleColor: const Color(0xFF67AE6E),
           ),
 
           // Auto-Lock Timer Card
