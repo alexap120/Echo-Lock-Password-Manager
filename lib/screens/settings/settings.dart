@@ -15,6 +15,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import '../../models/card_item.dart';
 import '../../models/login_item.dart';
 import '../../models/notes_item.dart';
+import '2FA_setup.dart';
 import 'delete_account.dart';
 
 // The main Settings Screen Widget
@@ -312,7 +313,12 @@ class _SettingsScreenState extends State<SettingsScreen> {
             subtitle: 'Setup Two-Factor Authentication',
             trailing: const Icon(Icons.close, color: Colors.red),
             onTap: () {
-              print('Biometric Login toggled by card tap: $_isBiometricEnabled');
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (_) => const TwoFactorSetupScreen(),
+                ),
+              );
             },
             titleColor: Color(0xFF67AE6E),
           ),
