@@ -75,8 +75,8 @@ class _EnterPasswordScreenState extends State<EnterPasswordScreen> {
       );
       // Sync Firestore to Hive
       final firestore = FirebaseFirestore.instance;
-      final syncService = SyncService(firestore: firestore, hiveBox: loginBox);
-      await syncService.syncLoginItems(_savedEmail);
+      final syncService = SyncService(firestore: firestore);
+      await syncService.syncLoginItems(loginBox, _savedEmail);
       await syncService.syncNoteItems(notesBox, _savedEmail);
       await syncService.syncCardItems(cardsBox, _savedEmail);
     } catch (e) {

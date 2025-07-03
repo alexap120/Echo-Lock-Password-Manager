@@ -91,8 +91,8 @@ class _HomeScreenState extends State<HomeScreen> {
     final firestore = FirebaseFirestore.instance;
     final userId = FirebaseAuth.instance.currentUser?.uid;
     if (userId == null) return;
-    final syncService = SyncService(firestore: firestore, hiveBox: loginBox);
-    await syncService.syncLoginItems(userId);
+    final syncService = SyncService(firestore: firestore);
+    await syncService.syncLoginItems(loginBox, userId);
     await syncService.syncNoteItems(notesBox, userId);
     await syncService.syncCardItems(cardsBox, userId);
     if (mounted) setState(() {});
