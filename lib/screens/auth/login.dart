@@ -1,8 +1,10 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:hive/hive.dart';
 import 'package:password_manager/models/card_item.dart';
 import 'package:password_manager/screens/auth/resetPassword/enter_email.dart';
+import 'package:password_manager/screens/auth/two_factor_login.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../../keyManager.dart';
 import '../../models/login_item.dart';
@@ -82,7 +84,7 @@ class _LoginScreenState extends State<LoginScreen> {
                   });
                 },
               ),
-// Remember me checkbox
+              // Remember me checkbox
               Padding(
                 padding: const EdgeInsets.only(top: 12.0),
                 child: Row(
@@ -117,8 +119,6 @@ class _LoginScreenState extends State<LoginScreen> {
                   ],
                 ),
               ),
-
-
 
               const SizedBox(height: 50),
               Row(
@@ -165,102 +165,121 @@ class _LoginScreenState extends State<LoginScreen> {
                           ScaffoldMessenger.of(context).showSnackBar(
                             SnackBar(content: Text(result)),
                           );
-                        } else if (result is Map<String, dynamic>) {
-                          final prefs = await SharedPreferences.getInstance();
-                          if (rememberMe) {
-                            await prefs.setBool('remember_me', true);
-                            await prefs.setString('remembered_email', email);
-                          }
+                          return;
+                        }
 
-                          Uint8List? key = await PBKDF2KeyManager.loadKeyFromLocal();
-                          if (key == null) {
-                            try {
-                              final salt = await PBKDF2KeyManager.fetchSaltFromFirestore(email);
-                              key = await PBKDF2KeyManager.deriveKey(password, salt);
-                              await PBKDF2KeyManager.storeKeyAndSaltLocally(key, salt);
-                            } catch (e) {
-                              ScaffoldMessenger.of(context).showSnackBar(
-                                SnackBar(content: Text("Failed to fetch salt or derive key: $e")),
-                              );
-                              return;
-                            }
-                          }
+                        // Only basic prefs and rememberMe here
+                        final prefs = await SharedPreferences.getInstance();
+                        if (rememberMe) {
+                          await prefs.setBool('remember_me', true);
+                          await prefs.setString('remembered_email', email);
+                        }
 
-                          late Box<LoginItem> loginBox;
-                          late Box<NoteItem> notesBox;
-                          late Box<CardItem> cardsBox;
-                          try {
-                            loginBox = await Hive.openBox<LoginItem>(
-                              'loginBox',
-                              encryptionCipher: HiveAesCipher(key),
-                            );
-                            notesBox = await Hive.openBox<NoteItem>(
-                              'notesBox',
-                              encryptionCipher: HiveAesCipher(key),
-                            );
-                            cardsBox = await Hive.openBox<CardItem>(
-                              'cardsBox',
-                              encryptionCipher: HiveAesCipher(key),
-                            );
-                          } catch (e) {
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              SnackBar(content: Text("Failed to open vault: $e")),
+                        final uid = FirebaseAuth.instance.currentUser?.uid;
+                        if (uid != null) {
+                          final userDoc = await FirebaseFirestore.instance.collection('users').doc(uid).get();
+                          final bool twoFAEnabled = userDoc.data()?['two_fa_enabled'] ?? false;
+
+                          if (twoFAEnabled) {
+                            // Only navigate to 2FA, do not load vaults or sync yet
+                            Navigator.pushReplacement(
+                              context,
+                              MaterialPageRoute(
+                                builder: (context) => TwoFactorLoginScreen(
+                                  email: email,
+                                  password: password,
+                                  result: result,
+                                ),
+                              ),
                             );
                             return;
                           }
+                        }
 
-                          // SYNC Firestore with local Hive box here:
+                        // Only load vaults and sync here if 2FA is NOT enabled
+                        Uint8List? key = await PBKDF2KeyManager.loadKeyFromLocal();
+                        if (key == null) {
                           try {
-                            final firestore = FirebaseFirestore.instance;
-                            final syncService = SyncService(firestore: firestore, hiveBox: loginBox);
-                            await syncService.syncLoginItems(email);
-                            await syncService.syncNoteItems(notesBox, email);
-                            await syncService.syncCardItems(cardsBox, email);
+                            final salt = await PBKDF2KeyManager.fetchSaltFromFirestore(email);
+                            key = await PBKDF2KeyManager.deriveKey(password, salt);
+                            await PBKDF2KeyManager.storeKeyAndSaltLocally(key, salt);
                           } catch (e) {
-                            debugPrint("Sync error: $e");
                             ScaffoldMessenger.of(context).showSnackBar(
-                              SnackBar(content: Text("Warning: Failed to sync data: $e")),
+                              SnackBar(content: Text("Failed to fetch salt or derive key: $e")),
                             );
+                            return;
                           }
+                        }
 
-                          // ... rest of your code for storing prefs and navigation ...
-                          final DateTime? createdAt = result['createdAt']?.toDate();
-                          final String formattedDate = createdAt != null
-                              ? DateFormat('dd-MM-yyyy').format(createdAt)
-                              : '';
-
-                          await prefs.setString('firstName', result['firstName'] ?? '');
-                          await prefs.setString('lastName', result['lastName'] ?? '');
-                          await prefs.setString('username', result['username'] ?? '');
-                          await prefs.setString('email', result['email'] ?? '');
-                          await prefs.setString('phoneNumber', result['phoneNumber'] ?? '');
-                          await prefs.setString('memberSince', formattedDate);
-
-                          if (!prefs.containsKey('biometric_enabled')) {
-                            await prefs.setBool('biometric_enabled', false);
-                          }
-
-                          final phoneNumber = result['phoneNumber'];
-                          final phoneVerified = result['phoneVerified'] == true;
-
-                          if (phoneNumber == null || !phoneVerified) {
-                            Navigator.pushReplacement(
-                              context,
-                              MaterialPageRoute(builder: (context) => AddPhoneScreen()),
-                            );
-                          } else {
-                            Navigator.pushReplacement(
-                              context,
-                              MaterialPageRoute(builder: (context) => const HomeScreen()),
-                            );
-                          }
-                        } else {
+                        late Box<LoginItem> loginBox;
+                        late Box<NoteItem> notesBox;
+                        late Box<CardItem> cardsBox;
+                        try {
+                          loginBox = await Hive.openBox<LoginItem>(
+                            'loginBox',
+                            encryptionCipher: HiveAesCipher(key),
+                          );
+                          notesBox = await Hive.openBox<NoteItem>(
+                            'notesBox',
+                            encryptionCipher: HiveAesCipher(key),
+                          );
+                          cardsBox = await Hive.openBox<CardItem>(
+                            'cardsBox',
+                            encryptionCipher: HiveAesCipher(key),
+                          );
+                        } catch (e) {
                           ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(content: Text("Unexpected login error.")),
+                            SnackBar(content: Text("Failed to open vault: $e")),
+                          );
+                          return;
+                        }
+
+                        try {
+                          final firestore = FirebaseFirestore.instance;
+                          final syncService = SyncService(firestore: firestore);
+                          await syncService.syncLoginItems(loginBox, email);
+                          await syncService.syncNoteItems(notesBox, email);
+                          await syncService.syncCardItems(cardsBox, email);
+                        } catch (e) {
+                          debugPrint("Sync error: $e");
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(content: Text("Warning: Failed to sync data: $e")),
+                          );
+                        }
+
+                        // Store prefs and navigate as before
+                        final DateTime? createdAt = result['createdAt']?.toDate();
+                        final String formattedDate = createdAt != null
+                            ? DateFormat('dd-MM-yyyy').format(createdAt)
+                            : '';
+
+                        await prefs.setString('firstName', result['firstName'] ?? '');
+                        await prefs.setString('lastName', result['lastName'] ?? '');
+                        await prefs.setString('username', result['username'] ?? '');
+                        await prefs.setString('email', result['email'] ?? '');
+                        await prefs.setString('phoneNumber', result['phoneNumber'] ?? '');
+                        await prefs.setString('memberSince', formattedDate);
+
+                        if (!prefs.containsKey('biometric_enabled')) {
+                          await prefs.setBool('biometric_enabled', false);
+                        }
+
+                        final phoneNumber = result['phoneNumber'];
+                        final phoneVerified = result['phoneVerified'] == true;
+
+                        if (phoneNumber == null || !phoneVerified) {
+                          Navigator.pushReplacement(
+                            context,
+                            MaterialPageRoute(builder: (context) => AddPhoneScreen()),
+                          );
+                        } else {
+                          Navigator.pushReplacement(
+                            context,
+                            MaterialPageRoute(builder: (context) => const HomeScreen()),
                           );
                         }
                       },
-                        style: ElevatedButton.styleFrom(
+                      style: ElevatedButton.styleFrom(
                         backgroundColor: const Color(0xFF328E6E),
                         foregroundColor: Colors.white,
                         padding: const EdgeInsets.symmetric(vertical: 14),
@@ -302,7 +321,6 @@ class _LoginScreenState extends State<LoginScreen> {
                   ),
                   child: const Text('Reset Password'),
                 ),
-
               ),
             ],
           ),

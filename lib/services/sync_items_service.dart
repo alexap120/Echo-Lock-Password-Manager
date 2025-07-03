@@ -15,18 +15,17 @@ import '../models/notes_item.dart';
 
 class SyncService {
   final FirebaseFirestore firestore;
-  final Box<LoginItem> hiveBox;
 
-  SyncService({required this.firestore, required this.hiveBox});
+  SyncService({required this.firestore});
 
-  Future<void> syncLoginItems(String userId) async {
+  Future<void> syncLoginItems(Box<LoginItem> loginsBox, String userId) async {
     try {
       final loginsCollection = firestore
           .collection('users')
           .doc(FirebaseAuth.instance.currentUser?.uid)
           .collection('logins');
 
-      for (var item in hiveBox.values.toList()) {
+      for (var item in loginsBox.values.toList()) {
         if (item.syncStatus == 'new') {
           // Encrypt password before upload (implement as needed)
           // final encrypted = await encryptAesGcm(...);
@@ -61,7 +60,7 @@ class SyncService {
         final decryptedPassword = await decryptAesGcm(key, encryptedPassword);
         String fingerprint = sha256.convert(utf8.encode(decryptedPassword)).toString();
 
-        final existing = hiveBox.values.firstWhereOrNull(
+        final existing = loginsBox.values.firstWhereOrNull(
               (item) => item.firestoreId == doc.id,
         );
 
@@ -81,12 +80,12 @@ class SyncService {
             syncStatus: 'synced',
             passwordFingerprint: fingerprint,
           );
-          await hiveBox.add(loginItem);
+          await loginsBox.add(loginItem);
         }
       }
 
       // 3. Remove from Hive any item with firestoreId not in Firestore
-      final toDelete = hiveBox.values
+      final toDelete = loginsBox.values
           .where((item) => item.firestoreId != null && !firestoreIds.contains(item.firestoreId))
           .toList();
       for (var item in toDelete) {
