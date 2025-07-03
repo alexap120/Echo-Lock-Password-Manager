@@ -3,7 +3,6 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:password_manager/models/card_item.dart';
-import 'package:password_manager/services/auto_lock_manager.dart';
 import 'firebase_options.dart';
 import 'package:password_manager/models/notes_item.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -12,9 +11,6 @@ import 'models/login_item.dart';
 import 'screens/auth/login.dart';
 import 'screens/auth/login_password.dart';
 import 'keyManager.dart'; // assumes PBKDF2KeyManager is in this file
-
-// Declare a global navigator key here
-final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -72,29 +68,15 @@ class MyApp extends StatelessWidget {
 
   const MyApp({required this.initialScreen, super.key});
 
+
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
       title: 'Password Manager',
-      navigatorKey: navigatorKey,
       theme: ThemeData(
         colorScheme: ColorScheme.fromSeed(seedColor: Colors.deepPurple),
         useMaterial3: true,
       ),
-      builder: (context, child) {
-        // Wrap *all* screens/routes with IdleTimeoutManager
-        return IdleTimeoutManager(
-          onTimeout: () {
-            debugPrint('User is idle. Timeout triggered! Navigating to LoginScreen.');
-
-            navigatorKey.currentState?.pushAndRemoveUntil(
-              MaterialPageRoute(builder: (_) => EnterPasswordScreen()),
-                  (route) => false,
-            );
-          },
-          child: child!,
-        );
-      },
       home: initialScreen,
     );
   }
