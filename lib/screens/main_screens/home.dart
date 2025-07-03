@@ -80,6 +80,7 @@ class _HomeScreenState extends State<HomeScreen> {
           notesBox.values.any((item) => item.syncStatus == 'deleted') ||
           cardsBox.values.any((item) => item.syncStatus == 'deleted');
       if (hasDeleted) {
+        await Future.delayed(const Duration(milliseconds: 200));
         await _syncAll();
       }
       if (mounted) setState(() {});
