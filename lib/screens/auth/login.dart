@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
@@ -31,11 +32,84 @@ class _LoginScreenState extends State<LoginScreen> {
   bool obscurePassword = true;
   bool rememberMe = false;
 
+  // Lockout state
+  int _failedAttempts = 0;
+  final int _maxAttempts = 5;
+  bool _isLockedOut = false;
+  int _lockoutSeconds = 60;
+  DateTime? _lockoutEndTime;
+  Timer? _lockoutTimer;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadLockoutState();
+  }
+
   @override
   void dispose() {
     emailController.dispose();
     passwordController.dispose();
+    _lockoutTimer?.cancel();
     super.dispose();
+  }
+
+  Future<void> _loadLockoutState() async {
+    final prefs = await SharedPreferences.getInstance();
+    _failedAttempts = prefs.getInt('login_failed_attempts') ?? 0;
+    final lockoutEndMillis = prefs.getInt('login_lockout_end') ?? 0;
+    if (lockoutEndMillis > 0) {
+      final end = DateTime.fromMillisecondsSinceEpoch(lockoutEndMillis);
+      if (DateTime.now().isBefore(end)) {
+        setState(() {
+          _isLockedOut = true;
+          _lockoutEndTime = end;
+        });
+        _startLockoutTimer();
+      } else {
+        await _resetLockout();
+      }
+    }
+  }
+
+  Future<void> _incrementFailedAttempts() async {
+    final prefs = await SharedPreferences.getInstance();
+    _failedAttempts++;
+    await prefs.setInt('login_failed_attempts', _failedAttempts);
+    if (_failedAttempts >= _maxAttempts) {
+      final lockoutEnd = DateTime.now().add(Duration(seconds: _lockoutSeconds));
+      await prefs.setInt('login_lockout_end', lockoutEnd.millisecondsSinceEpoch);
+      setState(() {
+        _isLockedOut = true;
+        _lockoutEndTime = lockoutEnd;
+      });
+      _startLockoutTimer();
+    }
+  }
+
+  Future<void> _resetLockout() async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setInt('login_failed_attempts', 0);
+    await prefs.setInt('login_lockout_end', 0);
+    setState(() {
+      _failedAttempts = 0;
+      _isLockedOut = false;
+      _lockoutEndTime = null;
+    });
+    _lockoutTimer?.cancel();
+  }
+
+  void _startLockoutTimer() {
+    _lockoutTimer?.cancel();
+    if (_lockoutEndTime == null) return;
+    final seconds = _lockoutEndTime!.difference(DateTime.now()).inSeconds;
+    if (seconds > 0) {
+      _lockoutTimer = Timer(Duration(seconds: seconds), () async {
+        await _resetLockout();
+      });
+    } else {
+      _resetLockout();
+    }
   }
 
   @override
@@ -49,20 +123,20 @@ class _LoginScreenState extends State<LoginScreen> {
             children: [
               const SizedBox(height: 150),
               const Text(
-                'ConceptX',
+                'EchoLock',
                 style: TextStyle(
                   fontSize: 24,
                   fontWeight: FontWeight.bold,
                   color: Color(0xFF328E6E),
                 ),
               ),
-              const SizedBox(height: 40),
-              const Icon(
-                Icons.view_in_ar,
-                color: Colors.deepPurple,
-                size: 40,
+              const SizedBox(height: 20),
+              Image.asset(
+                'assets/app_icon.png',
+                width: 100,
+                height: 100,
               ),
-              const SizedBox(height: 125),
+              const SizedBox(height: 70),
 
               CustomInputField(
                 label: 'Email',
@@ -120,7 +194,8 @@ class _LoginScreenState extends State<LoginScreen> {
                 ),
               ),
 
-              const SizedBox(height: 50),
+
+              const SizedBox(height: 30),
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
@@ -145,7 +220,9 @@ class _LoginScreenState extends State<LoginScreen> {
                   const SizedBox(width: 12),
                   Expanded(
                     child: ElevatedButton(
-                      onPressed: () async {
+                      onPressed: _isLockedOut
+                          ? null
+                          : () async {
                         final email = emailController.text.trim();
                         final password = passwordController.text;
 
@@ -162,11 +239,14 @@ class _LoginScreenState extends State<LoginScreen> {
                         );
 
                         if (result is String) {
+                          await _incrementFailedAttempts();
                           ScaffoldMessenger.of(context).showSnackBar(
-                            SnackBar(content: Text(result)),
+                            SnackBar(content: Text("Invalid credentials")),
                           );
                           return;
                         }
+
+                        await _resetLockout();
 
                         // Only basic prefs and rememberMe here
                         final prefs = await SharedPreferences.getInstance();
@@ -181,7 +261,6 @@ class _LoginScreenState extends State<LoginScreen> {
                           final bool twoFAEnabled = userDoc.data()?['two_fa_enabled'] ?? false;
 
                           if (twoFAEnabled) {
-                            // Only navigate to 2FA, do not load vaults or sync yet
                             Navigator.pushReplacement(
                               context,
                               MaterialPageRoute(
@@ -292,6 +371,17 @@ class _LoginScreenState extends State<LoginScreen> {
                   ),
                 ],
               ),
+
+              Padding(
+                padding: const EdgeInsets.only(top: 20, bottom: 0),
+                child: _isLockedOut
+                    ? const Text(
+                  'Too many failed attempts. Please try again later.',
+                  style: TextStyle(color: Colors.red, fontWeight: FontWeight.bold),
+                )
+                    : const SizedBox.shrink(),
+              ),
+
               const SizedBox(height: 100),
               Align(
                 alignment: Alignment.centerLeft,

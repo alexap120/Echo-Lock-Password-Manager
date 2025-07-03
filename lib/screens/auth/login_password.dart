@@ -14,6 +14,7 @@ import '../../services/sync_items_service.dart';
 import '../../widgets/custom_input_field.dart';
 import '../addPhone.dart';
 import 'auth_service.dart';
+import 'login.dart';
 
 class EnterPasswordScreen extends StatefulWidget {
   const EnterPasswordScreen({super.key});
@@ -33,6 +34,10 @@ class _EnterPasswordScreenState extends State<EnterPasswordScreen> {
   dynamic _profileImage;
   bool _showBiometricButton = false;
 
+  // Adaptive lockout
+  int _failedAttempts = 0;
+  final int _maxAttempts = 5;
+  bool _isLockedOut = false;
 
   Future<void> _loadUserName() async {
     final prefs = await SharedPreferences.getInstance();
@@ -46,12 +51,10 @@ class _EnterPasswordScreenState extends State<EnterPasswordScreen> {
   Future<void> _syncItems() async {
     final connectivityResult = await Connectivity().checkConnectivity();
     if (connectivityResult.isEmpty || connectivityResult.first == ConnectivityResult.none){
-      // Device is offline, skip sync
       debugPrint('Offline: skipping sync');
       return;
     }
     try {
-      // Load key from local storage
       final key = await PBKDF2KeyManager.loadKeyFromLocal();
       if (key == null) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -59,8 +62,6 @@ class _EnterPasswordScreenState extends State<EnterPasswordScreen> {
         );
         return;
       }
-
-      // Open Hive boxes
       final loginBox = await Hive.openBox<LoginItem>(
         'loginBox',
         encryptionCipher: HiveAesCipher(key),
@@ -73,7 +74,6 @@ class _EnterPasswordScreenState extends State<EnterPasswordScreen> {
         'cardsBox',
         encryptionCipher: HiveAesCipher(key),
       );
-      // Sync Firestore to Hive
       final firestore = FirebaseFirestore.instance;
       final syncService = SyncService(firestore: firestore);
       await syncService.syncLoginItems(loginBox, _savedEmail);
@@ -86,31 +86,66 @@ class _EnterPasswordScreenState extends State<EnterPasswordScreen> {
     }
   }
 
-
   Future<void> _checkBiometricAvailability() async {
     final prefs = await SharedPreferences.getInstance();
     final biometricsEnabled = prefs.getBool('biometric_enabled') ?? false;
     final canCheckBiometrics = await _localAuth.canCheckBiometrics;
-
     final shouldShow = biometricsEnabled && canCheckBiometrics;
-
     setState(() {
       _showBiometricButton = shouldShow;
     });
-
     if (shouldShow) {
-      // Trigger biometric authentication automatically
       _authenticateWithBiometrics();
     }
   }
+
+  // --- Adaptive lockout logic ---
+  Future<void> _loadFailedAttempts() async {
+    final prefs = await SharedPreferences.getInstance();
+    setState(() {
+      _failedAttempts = prefs.getInt('failed_attempts') ?? 0;
+      _isLockedOut = _failedAttempts >= _maxAttempts;
+    });
+  }
+
+  Future<void> _incrementFailedAttempts() async {
+    final prefs = await SharedPreferences.getInstance();
+    _failedAttempts++;
+    await prefs.setInt('failed_attempts', _failedAttempts);
+    if (_failedAttempts >= _maxAttempts) {
+      setState(() => _isLockedOut = true);
+      await _logoutCompletely();
+    }
+  }
+
+  Future<void> _resetFailedAttempts() async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setInt('failed_attempts', 0);
+    setState(() {
+      _failedAttempts = 0;
+      _isLockedOut = false;
+    });
+  }
+
+  Future<void> _logoutCompletely() async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.clear();
+    if (mounted) {
+      Navigator.of(context).pushAndRemoveUntil(
+        MaterialPageRoute(builder: (_) => const LoginScreen()),
+            (route) => false,
+      );
+    }
+  }
+  // --- End adaptive lockout logic ---
 
   @override
   void initState() {
     super.initState();
     _loadUserName();
     _checkBiometricAvailability();
+    _loadFailedAttempts();
   }
-
 
   @override
   void dispose() {
@@ -122,7 +157,6 @@ class _EnterPasswordScreenState extends State<EnterPasswordScreen> {
     try {
       bool canCheckBiometrics = await _localAuth.canCheckBiometrics;
       bool isAuthenticated = false;
-
       if (canCheckBiometrics) {
         isAuthenticated = await _localAuth.authenticate(
           localizedReason: 'Authenticate to continue',
@@ -132,19 +166,16 @@ class _EnterPasswordScreenState extends State<EnterPasswordScreen> {
           ),
         );
       }
-
       if (isAuthenticated) {
+        await _resetFailedAttempts();
         await _syncItems();
-        // Check phone number in Firestore after biometric auth
         final prefs = await SharedPreferences.getInstance();
         final savedEmail = prefs.getString('remembered_email') ?? '';
-
         bool isOffline = false;
         final connectivityResult = await Connectivity().checkConnectivity();
         if (connectivityResult == ConnectivityResult.none) {
           isOffline = true;
         }
-
         if (!isOffline && savedEmail.isNotEmpty) {
           try {
             final querySnapshot = await FirebaseFirestore.instance
@@ -152,12 +183,10 @@ class _EnterPasswordScreenState extends State<EnterPasswordScreen> {
                 .where('email', isEqualTo: savedEmail)
                 .limit(1)
                 .get();
-
             if (querySnapshot.docs.isNotEmpty) {
               final data = querySnapshot.docs.first.data();
               final phoneNumber = data['phoneNumber'];
               final phoneVerified = data['phoneVerified'] == true;
-
               if (phoneNumber == null || !phoneVerified) {
                 Navigator.pushReplacement(
                   context,
@@ -166,18 +195,13 @@ class _EnterPasswordScreenState extends State<EnterPasswordScreen> {
                 return;
               }
             }
-          } catch (e) {
-            // Optionally handle Firestore errors here
-          }
+          } catch (e) {}
         }
-
-        // If phone present and verified or email missing or offline, fallback to home
         Navigator.pushReplacement(
           context,
           MaterialPageRoute(builder: (context) => const HomeScreen()),
         );
       }
-
     } on PlatformException catch (e) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text("Biometric Error: ${e.message}")),
@@ -185,10 +209,20 @@ class _EnterPasswordScreenState extends State<EnterPasswordScreen> {
     }
   }
 
-
-
   @override
   Widget build(BuildContext context) {
+    if (_isLockedOut) {
+      return Scaffold(
+        backgroundColor: Colors.white,
+        body: Center(
+          child: Text(
+            'Too many failed attempts.\nYou have been logged out.',
+            textAlign: TextAlign.center,
+            style: const TextStyle(fontSize: 18, color: Colors.red),
+          ),
+        ),
+      );
+    }
     return Scaffold(
       backgroundColor: Colors.white,
       body: SafeArea(
@@ -196,7 +230,6 @@ class _EnterPasswordScreenState extends State<EnterPasswordScreen> {
           padding: const EdgeInsets.symmetric(horizontal: 28.0),
           child: Column(
             children: [
-              // Main content centered
               Expanded(
                 child: Column(
                   mainAxisAlignment: MainAxisAlignment.center,
@@ -217,8 +250,8 @@ class _EnterPasswordScreenState extends State<EnterPasswordScreen> {
                           radius: 50,
                           backgroundColor: Colors.grey[300],
                           backgroundImage: _profileImage != null
-                              ? FileImage(_profileImage!) // User-selected image
-                              : null, // Default image
+                              ? FileImage(_profileImage!)
+                              : null,
                           child: _profileImage == null
                               ? Icon(Icons.person, size: 60, color: Colors.grey[600])
                               : null,
@@ -259,8 +292,6 @@ class _EnterPasswordScreenState extends State<EnterPasswordScreen> {
                   ],
                 ),
               ),
-
-              // Conditionally show biometric button
               if (_showBiometricButton)
                 SizedBox(
                   width: double.infinity,
@@ -281,10 +312,7 @@ class _EnterPasswordScreenState extends State<EnterPasswordScreen> {
                     ),
                   ),
                 ),
-
               if (_showBiometricButton) const SizedBox(height: 12),
-
-              // Continue Button
               SizedBox(
                 width: double.infinity,
                 height: 50,
@@ -294,22 +322,19 @@ class _EnterPasswordScreenState extends State<EnterPasswordScreen> {
                       email: _savedEmail,
                       password: _passwordController.text.trim(),
                     );
-
                     if (result is String) {
-                      // Error message
+                      await _incrementFailedAttempts();
                       ScaffoldMessenger.of(context).showSnackBar(
-                        SnackBar(content: Text("An unexpected error occurred")),
+                        SnackBar(content: Text("Invalid password")),
                       );
                     } else {
-                      // Success: check phone number, then navigate
+                      await _resetFailedAttempts();
                       await _syncItems();
-
                       bool isOffline = false;
                       final connectivityResult = await Connectivity().checkConnectivity();
                       if (connectivityResult == ConnectivityResult.none) {
                         isOffline = true;
                       }
-
                       if (!isOffline) {
                         try {
                           final querySnapshot = await FirebaseFirestore.instance
@@ -317,12 +342,10 @@ class _EnterPasswordScreenState extends State<EnterPasswordScreen> {
                               .where('email', isEqualTo: _savedEmail)
                               .limit(1)
                               .get();
-
                           if (querySnapshot.docs.isNotEmpty) {
                             final data = querySnapshot.docs.first.data();
                             final phoneNumber = data['phoneNumber'];
                             final phoneVerified = data['phoneVerified'] == true;
-
                             if (phoneNumber == null || !phoneVerified) {
                               Navigator.pushReplacement(
                                 context,
@@ -332,11 +355,8 @@ class _EnterPasswordScreenState extends State<EnterPasswordScreen> {
                               return;
                             }
                           }
-                        } catch (e) {
-                          // Optionally handle Firestore errors here
-                        }
+                        } catch (e) {}
                       }
-
                       Navigator.pushReplacement(
                         context,
                         MaterialPageRoute(builder: (context) => const HomeScreen()),

@@ -12,6 +12,7 @@ import 'package:password_manager/screens/login_items/add_card.dart';
 import 'package:password_manager/screens/login_items/add_note.dart';
 import 'package:password_manager/screens/profile/profile_page.dart';
 import 'package:password_manager/services/auto_lock_manager.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 import '../../models/login_item.dart';
 import '../../models/notes_item.dart';
@@ -30,7 +31,7 @@ class HomeScreen extends StatefulWidget {
   State<HomeScreen> createState() => _HomeScreenState();
 }
 
-class _HomeScreenState extends State<HomeScreen> {
+class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
   int _selectedIndex = 0;
   final TextEditingController _searchController = TextEditingController();
   String _searchQuery = '';
@@ -48,6 +49,8 @@ class _HomeScreenState extends State<HomeScreen> {
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
+
     loginBox = Hive.box<LoginItem>('loginBox');
     notesBox = Hive.box<NoteItem>('notesBox');
     cardsBox = Hive.box<CardItem>('cardsBox');
@@ -96,6 +99,7 @@ class _HomeScreenState extends State<HomeScreen> {
 
   @override
   void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
     _syncDebounce?.cancel();
     _connectivitySubscription?.cancel();
     loginBox.listenable().removeListener(_loginListener);
@@ -104,6 +108,19 @@ class _HomeScreenState extends State<HomeScreen> {
     _searchController.dispose();
     super.dispose();
   }
+
+  // --- Instant lock on app switch ---
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) async {
+    if (state == AppLifecycleState.paused || state == AppLifecycleState.inactive) {
+      final prefs = await SharedPreferences.getInstance();
+      final instantLock = prefs.getBool('instant_lock_enabled') ?? false;
+      if (instantLock) {
+        _logoutUser();
+      }
+    }
+  }
+  // --- End instant lock ---
 
   @override
   Widget build(BuildContext context) {
@@ -115,12 +132,16 @@ class _HomeScreenState extends State<HomeScreen> {
         appBar: AppBar(
           elevation: 0,
           backgroundColor: const Color(0xFF328E6E),
-          leading: const Padding(
-            padding: EdgeInsets.only(left: 16.0),
-            child: Icon(Icons.inventory_2_outlined, color: Colors.deepPurple),
+          leading: Padding(
+            padding: const EdgeInsets.only(left: 16.0),
+            child:  Image.asset(
+              'assets/app_icon.png',
+              width: 40,
+              height: 40,
+            ),
           ),
           title: const Text(
-            'ConceptX',
+            'EchoLock',
             style: TextStyle(
               fontWeight: FontWeight.bold,
               color: Colors.white,

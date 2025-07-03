@@ -211,6 +211,7 @@ class _TwoFactorLoginScreenState extends State<TwoFactorLoginScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       resizeToAvoidBottomInset: true,
+      backgroundColor: Colors.grey[100],
       appBar: AppBar(title: const Text("Enter Authenticator Code")),
       body: SafeArea(
         child: LayoutBuilder(
