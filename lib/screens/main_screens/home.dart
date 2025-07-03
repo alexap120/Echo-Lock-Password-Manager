@@ -44,14 +44,10 @@ class _HomeScreenState extends State<HomeScreen> {
   late final VoidCallback _loginListener;
   late final VoidCallback _noteListener;
   late final VoidCallback _cardListener;
-  late AutoLockManager autoLockManager;
 
   @override
   void initState() {
     super.initState();
-    autoLockManager = AutoLockManager(onTimeout: _logoutUser);
-    autoLockManager.loadSetting().then((_) => autoLockManager.start());
-    WidgetsBinding.instance.addObserver(autoLockManager);
     loginBox = Hive.box<LoginItem>('loginBox');
     notesBox = Hive.box<NoteItem>('notesBox');
     cardsBox = Hive.box<CardItem>('cardsBox');
@@ -107,8 +103,6 @@ class _HomeScreenState extends State<HomeScreen> {
     notesBox.listenable().removeListener(_noteListener);
     cardsBox.listenable().removeListener(_cardListener);
     _searchController.dispose();
-    autoLockManager.stopTimer();
-    WidgetsBinding.instance.removeObserver(autoLockManager);
     super.dispose();
   }
 
