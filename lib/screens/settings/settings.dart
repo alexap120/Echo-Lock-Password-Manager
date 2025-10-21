@@ -203,12 +203,16 @@ class _SettingsScreenState extends State<SettingsScreen> {
       appBar: AppBar(
         elevation: 0,
         backgroundColor: const Color(0xFFF3F4F6),
-        leading: const Padding(
-          padding: EdgeInsets.only(left: 16.0),
-          child: Icon(Icons.inventory_2_outlined, color: Colors.deepPurple),
+        leading: Padding(
+          padding: const EdgeInsets.only(left: 16.0),
+          child:       Image.asset(
+            'assets/app_icon.png',
+            width: 40,
+            height: 40,
+          ),
         ),
         title: const Text(
-          'ConceptX',
+          'EchoLock',
           style: TextStyle(
             fontWeight: FontWeight.bold,
             color: Color(0xFF328E6E),

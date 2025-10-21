@@ -84,7 +84,7 @@ class _UpdatePasswordState extends State<UpdatePassword> {
             width: double.infinity,
             child: ElevatedButton(
               onPressed: () {
-                // Handle password update logic here
+
               },
               style: ElevatedButton.styleFrom(
                 padding: const EdgeInsets.symmetric(vertical: 16),

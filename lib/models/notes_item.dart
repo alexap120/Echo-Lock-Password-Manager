@@ -2,7 +2,7 @@ import 'package:hive/hive.dart';
 
 part 'notes_item.g.dart';
 
-@HiveType(typeId: 1) // Use a different typeId from LoginItem!
+@HiveType(typeId: 1)
 class NoteItem extends HiveObject {
   @HiveField(0)
   String title;

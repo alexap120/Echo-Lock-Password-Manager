@@ -5,7 +5,6 @@ class AuthService {
   final FirebaseAuth _auth = FirebaseAuth.instance;
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
 
-  //Register a new user with email and password
   Future<String?> registerWithEmail({
     required String email,
     required String password,
@@ -42,8 +41,6 @@ class AuthService {
     }
   }
 
-  //Sign in with email and password
-  // Now returns Map<String, dynamic>? with user profile on success, or String error message
   Future<dynamic> signInWithEmail({
     required String email,
     required String password,
@@ -63,7 +60,6 @@ class AuthService {
         return 'Please verify your email before logging in.';
       }
 
-      // Fetch user profile data from Firestore
       DocumentSnapshot<Map<String, dynamic>> userDoc =
       await _firestore.collection('users').doc(user.uid).get();
 
@@ -73,7 +69,6 @@ class AuthService {
 
       Map<String, dynamic>? userData = userDoc.data();
 
-      // Return the user data (firstName, lastName, username, email)
       return userData;
     } on FirebaseAuthException catch (e) {
       print('FirebaseAuthException [${e.code}]: ${e.message}');
