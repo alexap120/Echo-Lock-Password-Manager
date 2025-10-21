@@ -1,6 +1,6 @@
 import 'package:hive/hive.dart';
 
-part 'card_item.g.dart'; // Make sure to run build_runner to generate this
+part 'card_item.g.dart';
 
 @HiveType(typeId: 2)
 class CardItem extends HiveObject {
@@ -17,10 +17,10 @@ class CardItem extends HiveObject {
   String cvv;
 
   @HiveField(4)
-  String? pin; // Optional
+  String? pin;
 
   @HiveField(5)
-  String? firestoreId; // Optional, not final to allow later updates
+  String? firestoreId;
 
   @HiveField(6)
   String syncStatus;
@@ -32,7 +32,7 @@ class CardItem extends HiveObject {
     required this.cvv,
     this.pin,
     this.firestoreId,
-    this.syncStatus = 'new', // Default to 'new'
+    this.syncStatus = 'new',
   });
 
   String get type => 'Card';

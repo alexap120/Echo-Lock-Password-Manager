@@ -205,7 +205,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
         backgroundColor: const Color(0xFFF3F4F6),
         leading: Padding(
           padding: const EdgeInsets.only(left: 16.0),
-          child: Image.asset(
+          child:       Image.asset(
             'assets/app_icon.png',
             width: 40,
             height: 40,

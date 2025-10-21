@@ -10,7 +10,7 @@ import 'package:hive_flutter/hive_flutter.dart';
 import 'models/login_item.dart';
 import 'screens/auth/login.dart';
 import 'screens/auth/login_password.dart';
-import 'keyManager.dart'; // assumes PBKDF2KeyManager is in this file
+import 'keyManager.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();

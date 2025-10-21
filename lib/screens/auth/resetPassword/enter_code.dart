@@ -30,7 +30,6 @@ class _EnterCodeResetState extends State<EnterCodeReset> {
       if (index < _controllers.length - 1) {
         FocusScope.of(context).requestFocus(_focusNodes[index + 1]);
       } else {
-        // Optionally trigger an action when all digits are entered
         print('Entered code: ${_controllers.map((c) => c.text).join()}');
       }
     } else if (index > 0) {

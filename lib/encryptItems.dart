@@ -2,7 +2,7 @@ import 'dart:convert';
 import 'dart:typed_data';
 import 'package:cryptography/cryptography.dart';
 
-// Example encrypt function with AES-GCM:
+
 Future<Map<String, String>> encryptAesGcm(Uint8List key, String plaintext) async {
   final aesGcm = AesGcm.with256bits();
   final secretKey = SecretKey(key);
