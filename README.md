@@ -54,7 +54,7 @@ A secure, cross-platform password manager built with Flutter, featuring end-to-e
 
 1. **Clone the repository**
    ```bash
-   git clone https://github.com/alexap120/password_manager.git
+   git clone https://github.com/alexap120/Echo-Lock-Password-Manager.git
    cd password_manager
    ```
 
